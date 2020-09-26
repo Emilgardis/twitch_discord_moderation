@@ -51,27 +51,8 @@ impl Subscriber {
 
     pub async fn run(self) -> Result<(), anyhow::Error> {
         // Send ping every 5 minutes...
-        let mut s = self.connect(twitch_api2::TWITCH_PUBSUB_URL).await?;
-        let id = self
-            .broadcaster_token
-            .validate_token(twitch_oauth2::client::reqwest_http_client)
-            .await?
-            .user_id
-            .context("no userid")?
-            .parse()?;
-        let topic = twitch_api2::pubsub::ChatModeratorActions {
-            channel_id: id,
-            user_id: id,
-        };
-        s.send(Message::text(
-            twitch_api2::pubsub::TopicSubscribe::Listen {
-                nonce: None,
-                topics: vec![topic.into()],
-                auth_token: self.broadcaster_token.token().clone(),
-            }
-            .to_message()
-        ?))
-        .await?;
+        let mut s = self.connect_and_send(twitch_api2::TWITCH_PUBSUB_URL).await?;
+        
         let mut ping_timer = tokio::time::interval(std::time::Duration::new(5 * 30, 0));
         loop {
             tokio::select!(
@@ -83,7 +64,15 @@ impl Subscriber {
                     Some(msg) = tokio::stream::StreamExt::next(&mut s) => {
                         let span = tracing::info_span!("message received", raw_message = ?msg);
                         async {
-                            let msg = msg.context("when getting msg")?;
+                            let msg = match msg {
+                                Err(async_tungstenite::tungstenite::Error::Protocol(e)) => {
+                                    tracing::warn!("{:?}", anyhow::anyhow!(async_tungstenite::tungstenite::Error::Protocol(e.clone())).context("when parsing msg"));
+                                    s = self.connect_and_send(twitch_api2::TWITCH_PUBSUB_URL).await?;
+
+                                    return Ok(())
+                                },
+                                _ => msg.context("when getting message")?,
+                            };
                             tracing::debug!("got message");
                             match msg {
                                 Message::Text(msg) => {
@@ -108,10 +97,37 @@ impl Subscriber {
         url: &str,
     ) -> Result<async_tungstenite::WebSocketStream<tokio_at::ConnectStream>, anyhow::Error>
     {
+        tracing::debug!("connecting to {}", url);
         let (socket, _) = tokio_at::connect_async(url::Url::parse(url)?)
             .await
             .context("Can't connect")?;
 
         Ok(socket)
+    }
+
+    pub async fn connect_and_send(&self, url: &str) -> Result<async_tungstenite::WebSocketStream<tokio_at::ConnectStream>, anyhow::Error> {
+        let mut s = self.connect(url).await?;
+
+        let id = self
+            .broadcaster_token
+            .validate_token(twitch_oauth2::client::reqwest_http_client)
+            .await?
+            .user_id
+            .context("no userid")?
+            .parse()?;
+        let topic = twitch_api2::pubsub::ChatModeratorActions {
+            channel_id: id,
+            user_id: id,
+        };
+        s.send(Message::text(
+            twitch_api2::pubsub::TopicSubscribe::Listen {
+                nonce: None,
+                topics: vec![topic.into()],
+                auth_token: self.broadcaster_token.token().clone(),
+            }
+            .to_message()
+        ?))
+        .await?;
+        Ok(s)
     }
 }
