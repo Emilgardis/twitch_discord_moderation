@@ -1,0 +1,16 @@
+**/target/
+**/*.rs.bk
+**/*.rsx
+**/*.db
+**/.env
+**/*.iml
+**/.idea/
+**/.vscode
+**/logfile*
+**/*.old
+**/*.log
+coverage_reports/
+/cargo-timing*.html
+**/.cargo
+**/.*
+!.github/
