@@ -58,7 +58,7 @@ impl Subscriber {
             tokio::select!(
                     _ = ping_timer.tick() => {
                         tracing::trace!("sending ping");
-                        s.send(Message::Ping(vec![1,3,3,7])).await?;
+                        s.send(Message::Ping(vec![])).await?;
                     },
 
                     Some(msg) = tokio::stream::StreamExt::next(&mut s) => {
@@ -66,7 +66,7 @@ impl Subscriber {
                         async {
                             let msg = match msg {
                                 Err(async_tungstenite::tungstenite::Error::Protocol(e)) => {
-                                    tracing::warn!("{:?}", anyhow::anyhow!(async_tungstenite::tungstenite::Error::Protocol(e.clone())).context("when parsing msg"));
+                                    tracing::warn!("{:?}", async_tungstenite::tungstenite::Error::Protocol(e.clone()));
                                     s = self.connect_and_send(twitch_api2::TWITCH_PUBSUB_URL).await?;
 
                                     return Ok(())

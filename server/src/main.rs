@@ -36,7 +36,7 @@ pub async fn run() -> anyhow::Result<()> {
                 path = %info.path(),
             )
         }));
-    let subscriber = subscriber::Subscriber::new().await?;
+    let subscriber = subscriber::Subscriber::new().await.context("when constructing subscriber")?;
     let recv = subscriber.pubsub_channel.subscribe();
     let server = warp::serve(route).run(([0, 0, 0, 0], 8080));
     let webhook = webhook::Webhook::new(&std::env::var("DISCORD_WEBHOOK").context("couldn't get webhook env")?);

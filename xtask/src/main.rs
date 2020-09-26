@@ -44,6 +44,13 @@ enum Command {
     Check(Check),
     /// Build and push the crate to remote
     Push(Push),
+    /// Build docker image
+    BuildDocker(BuildDocker),
+}
+
+#[derive(Debug, StructOpt)]
+pub struct BuildDocker {
+
 }
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Target {
@@ -105,6 +112,9 @@ fn main() -> anyhow::Result<()> {
         Command::Build(b) => build(&opt, &b)?,
         Command::Check(c) => check(&opt, &c)?,
         Command::Push(p) => push(&opt, &p)?,
+        Command::BuildDocker(_) => {
+            run!("docker build -t local/openssl-rpi1:latest ./docker")?;
+        }
     }
     Ok(())
 }
@@ -112,14 +122,14 @@ fn main() -> anyhow::Result<()> {
 pub fn build_json(opt: &Opt, build: &Build) -> anyhow::Result<String> {
     Ok(if opt.target == Target::Rpi {
         run!(
-            "cross build --message-format=json --target armv7-unknown-linux-gnueabihf --bin {} {}",
+            "cross build -v --message-format=json --target armv7-unknown-linux-gnueabihf --bin {} {}",
             build.binary,
             opt.release.to_flag() ;
             echo = false
         )?
     } else {
         run!(
-            "cargo build --message-format=json --bin {} {}",
+            "cargo build -v --message-format=json --bin {} {}",
             build.binary,
             opt.release.to_flag() ;
             echo = false
@@ -130,13 +140,13 @@ pub fn build_json(opt: &Opt, build: &Build) -> anyhow::Result<String> {
 pub fn build(opt: &Opt, build: &Build) -> anyhow::Result<()> {
     if opt.target == Target::Rpi {
         run!(
-            "cross build --target armv7-unknown-linux-gnueabihf --bin {} {}",
+            "cross build -v --target armv7-unknown-linux-gnueabihf --bin {} {}",
             build.binary,
             opt.release.to_flag()
         )?;
     } else {
         run!(
-            "cargo build --bin {} {}",
+            "cargo build -v --bin {} {}",
             build.binary,
             opt.release.to_flag()
         )?;
@@ -159,14 +169,14 @@ pub fn check(opt: &Opt, _: &Check) -> anyhow::Result<()> {
 pub fn push(opt: &Opt, _: &Push) -> anyhow::Result<()> {
     //build(opt, &Build::default())?;
     let binary = dbg!(compile_and_find_binary(&opt.target, opt))?;
-    let root = get_workspace_root(&opt.target)?;
+    let root = get_workspace_root(&Target::Local)?;
     if let Some(binary) = binary {
         run!(
             "scp .{} alarm@rpi1:/home/alarm/docker/twitch-discord-moderation-log/target/",
             binary.display()
         )?;
         run!(
-            "scp .{}/.env alarm@rpi1:/home/alarm/docker/twitch-discord-moderation-log/",
+            "scp {}/.env alarm@rpi1:/home/alarm/docker/twitch-discord-moderation-log/",
             root.display()
         )?;
         run!("ssh -n -T alarm@rpi1 chmod +x /home/alarm/docker/twitch-discord-moderation-log/target/*")?;

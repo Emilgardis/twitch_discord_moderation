@@ -1,4 +1,7 @@
 [target.armv7-unknown-linux-gnueabihf.env]
 passthrough = [
     "RUSTC_WRAPPER",
+    "RUST_BACKTRACE"
 ]
+[target.armv7-unknown-linux-gnueabihf]
+image = "local/openssl-rpi1:latest"
