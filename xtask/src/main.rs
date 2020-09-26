@@ -49,9 +49,7 @@ enum Command {
 }
 
 #[derive(Debug, StructOpt)]
-pub struct BuildDocker {
-
-}
+pub struct BuildDocker {}
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Target {
     Rpi,
@@ -113,7 +111,7 @@ fn main() -> anyhow::Result<()> {
         Command::Check(c) => check(&opt, &c)?,
         Command::Push(p) => push(&opt, &p)?,
         Command::BuildDocker(_) => {
-            run!("docker build -t local/openssl-rpi1:latest ./docker")?;
+            run!("docker build -t local/openssl-rpi1:tag .")?;
         }
     }
     Ok(())
@@ -122,14 +120,14 @@ fn main() -> anyhow::Result<()> {
 pub fn build_json(opt: &Opt, build: &Build) -> anyhow::Result<String> {
     Ok(if opt.target == Target::Rpi {
         run!(
-            "cross build -v --message-format=json --target armv7-unknown-linux-gnueabihf --bin {} {}",
+            "cross build -v --message-format=json --format-version=2 --target armv7-unknown-linux-gnueabihf --bin {} {}",
             build.binary,
             opt.release.to_flag() ;
             echo = false
         )?
     } else {
         run!(
-            "cargo build -v --message-format=json --bin {} {}",
+            "cargo build -v --message-format=json --format-version=2 --bin {} {}",
             build.binary,
             opt.release.to_flag() ;
             echo = false
@@ -168,21 +166,12 @@ pub fn check(opt: &Opt, _: &Check) -> anyhow::Result<()> {
 
 pub fn push(opt: &Opt, _: &Push) -> anyhow::Result<()> {
     //build(opt, &Build::default())?;
-    let binary = dbg!(compile_and_find_binary(&opt.target, opt))?;
+    //let binary = dbg!(compile_and_find_binary(&opt.target, opt))?;
     let root = get_workspace_root(&Target::Local)?;
-    if let Some(binary) = binary {
-        run!(
-            "scp .{} alarm@rpi1:/home/alarm/docker/twitch-discord-moderation-log/target/",
-            binary.display()
-        )?;
-        run!(
-            "scp {}/.env alarm@rpi1:/home/alarm/docker/twitch-discord-moderation-log/",
-            root.display()
-        )?;
-        run!("ssh -n -T alarm@rpi1 chmod +x /home/alarm/docker/twitch-discord-moderation-log/target/*")?;
-    } else {
-        anyhow::bail!("could not find binary");
-    }
+    run!(
+        "rsync -av -e ssh --exclude='target/' --exclude='.cargo/' --exclude='docker/' {}/server alarm@rpi1:/home/alarm/docker/twitch-discord-moderation-log/",
+        root.display()
+    )?;
     Ok(())
 }
 

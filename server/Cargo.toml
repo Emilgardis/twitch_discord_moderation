@@ -18,8 +18,10 @@ anyhow = "1.0.32"
 chrono = "0.4.15"
 ansi_term = "0.12.1"
 dotenv = "*"
-twitch_api2 = {version = "0.5.0-alpha.1", features = ["reqwest_client", "helix"]}
-twitch_oauth2 = {version = "0.5.0-alpha.1", features = ["reqwest_client"]}
+#twitch_api2 = {version = "0.5.0-alpha.1", features = ["reqwest_client", "helix"]}
+#twitch_oauth2 = {version = "0.5.0-alpha.1", features = ["reqwest_client"]}
+twitch_api2 = { git = "https://github.com/Emilgardis/twitch_api2.git", branch = "pubsub", features = ["reqwest_client", "helix"] }
+twitch_oauth2 = { git = "https://github.com/Emilgardis/twitch_api2.git", branch = "pubsub", features = ["reqwest_client"] }
 twitchchat = { version = "0.13.2", features = [
     "serde",
     "tokio",
