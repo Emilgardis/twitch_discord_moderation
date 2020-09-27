@@ -1,7 +1,7 @@
 
-FROM ubuntu:latest
+FROM alpine:latest
 
-COPY ./target/debug/twitch-discord-moderation .
+COPY ./target/release/twitch-discord-moderation .
 
 #COPY ./.env .
 #EXPOSE 8080
