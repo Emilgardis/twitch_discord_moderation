@@ -7,13 +7,19 @@ Install with [rustup.rs](https://rustup.rs/)
 
 ```bash
 # clone the repository
-$ git clone <url>
+$ git clone https://github.com/Emilgardis/twitch_discord_moderation.git
+# cd into it
+cd twitch_discord_moderation
 # edit .env file or set ENV vars accordingly
-$ cat .env
+$ cat .env # do this with your favorite editor, or set env vars
+RUST_LOG=info
 DISCORD_WEBHOOK="<path to discord webhook>"
 BROADCASTER_CHANNEL="<broadcaster name>"
 BROADCASTER_OAUTH="<broadcaster oauth token, need to have channel:moderate>"
-CHANNEL_BOT_NAME="<bot used in channel>"
+CHANNEL_BOT_NAME="<bot used in channel, optional>"
+# compile and run
+$ cargo run --release
+#
 ```
 
 <h5> License </h5>
