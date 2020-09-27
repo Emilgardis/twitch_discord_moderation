@@ -1,8 +1,5 @@
 use anyhow::Context;
-use async_tungstenite::{
-    tokio as tokio_at,
-    tungstenite::Message,
-};
+use async_tungstenite::{tokio as tokio_at, tungstenite::Message};
 use futures::prelude::*;
 use tokio::sync;
 use tracing_futures::Instrument;
@@ -31,8 +28,10 @@ impl Subscriber {
 
     pub async fn run(self) -> Result<(), anyhow::Error> {
         // Send ping every 5 minutes...
-        let mut s = self.connect_and_send(twitch_api2::TWITCH_PUBSUB_URL).await?;
-        
+        let mut s = self
+            .connect_and_send(twitch_api2::TWITCH_PUBSUB_URL)
+            .await?;
+
         let mut ping_timer = tokio::time::interval(std::time::Duration::new(5 * 30, 0));
         loop {
             tokio::select!(
@@ -85,7 +84,11 @@ impl Subscriber {
         Ok(socket)
     }
 
-    pub async fn connect_and_send(&self, url: &str) -> Result<async_tungstenite::WebSocketStream<tokio_at::ConnectStream>, anyhow::Error> {
+    pub async fn connect_and_send(
+        &self,
+        url: &str,
+    ) -> Result<async_tungstenite::WebSocketStream<tokio_at::ConnectStream>, anyhow::Error>
+    {
         let mut s = self.connect(url).await?;
 
         let id = self
@@ -105,8 +108,8 @@ impl Subscriber {
                 topics: vec![topic.into()],
                 auth_token: self.broadcaster_token.token().clone(),
             }
-            .to_message()
-        ?))
+            .to_message()?,
+        ))
         .await?;
         Ok(s)
     }
