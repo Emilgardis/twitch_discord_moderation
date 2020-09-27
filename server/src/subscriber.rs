@@ -11,14 +11,11 @@ use twitch_oauth2::TwitchToken;
 
 pub struct Subscriber {
     broadcaster_token: twitch_oauth2::UserToken,
-    pub server_token: twitch_oauth2::AppAccessToken,
-    pub client: twitch_api2::TwitchClient<'static, reqwest::Client>,
     pub pubsub_channel: sync::broadcast::Sender<twitch_api2::pubsub::Response>,
 }
 
 impl Subscriber {
     pub async fn new() -> Result<Self, anyhow::Error> {
-        let scopes = vec![Scope::ChatRead];
         let broadcaster_token = twitch_oauth2::UserToken::from_existing(
             twitch_oauth2::client::reqwest_http_client,
             twitch_oauth2::AccessToken::new(std::env::var("BROADCASTER_OAUTH2")?),
@@ -26,25 +23,8 @@ impl Subscriber {
         )
         .await
         .context("could not get broadcaster token")?;
-        let server_token = twitch_oauth2::AppAccessToken::get_app_access_token(
-            twitch_oauth2::client::reqwest_http_client,
-            twitch_oauth2::ClientId::new(
-                std::env::var("HELIX_CLIENT_ID")
-                    .with_context(|| "could not read env:HELIX_CLIENT_ID")?,
-            ),
-            twitch_oauth2::ClientSecret::new(
-                std::env::var("HELIX_CLIENT_SECRET")
-                    .with_context(|| "could not read env:HELIX_CLIENT_SECRET")?,
-            ),
-            scopes,
-        )
-        .await
-        .context("could not get app access token")?;
         Ok(Subscriber {
             broadcaster_token,
-            //,
-            server_token,
-            client: twitch_api2::TwitchClient::new(),
             pubsub_channel: sync::broadcast::channel(16).0,
         })
     }

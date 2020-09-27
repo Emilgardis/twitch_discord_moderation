@@ -2,7 +2,6 @@ pub mod subscriber;
 pub mod util;
 pub mod webhook;
 use anyhow::Context;
-use warp::Filter;
 
 #[tokio::main]
 async fn main() {
@@ -21,29 +20,10 @@ async fn main() {
 
 pub async fn run() -> anyhow::Result<()> {
     tracing::info!("App started!");
-
-    let route = warp::any()
-        .and(warp::body::bytes())
-        .map(|bytes| {
-            tracing::info!(body = ?bytes);
-            warp::reply()
-        })
-        .with(warp::trace(|info| {
-            // Create a span using tracing macros
-            tracing::info_span!(
-                "request",
-                method = %info.method(),
-                path = %info.path(),
-            )
-        }));
     let subscriber = subscriber::Subscriber::new().await.context("when constructing subscriber")?;
     let recv = subscriber.pubsub_channel.subscribe();
-    let server = warp::serve(route).run(([0, 0, 0, 0], 8080));
     let webhook = webhook::Webhook::new(&std::env::var("DISCORD_WEBHOOK").context("couldn't get webhook env")?);
     tokio::select!(
-        _ = server => {
-            return Err(anyhow::anyhow!("server returned early..."))
-        },
         r = subscriber.run() => {
             tracing::warn!(message = "subscriber exited early", result = ?r);
             if r.is_err() {
