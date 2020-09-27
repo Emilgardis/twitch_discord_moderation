@@ -34,7 +34,10 @@ impl Webhook {
         match action {
             moderation::ChatModeratorActionsReply::ModerationAction { args, created_by, moderation_action, target_user_id, .. } => {
                 let real_created_by = match created_by.as_str() {
-                    "sessisbot" => args.iter().last().map_or("sessisbot", |s| s.as_str()),
+                    "sessisbot" => match args.iter().last().map_or("by sessisbot", |s| s.as_str()).split(' ').collect::<Vec<_>>().as_slice() {
+                        [.., "by", user] => user,
+                        _ => "sessisbot",
+                    },
                     other => other,
                 };
                 self.webhook.send(|message| {
