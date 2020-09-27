@@ -14,7 +14,6 @@ cd twitch_discord_moderation
 $ cat .env # do this with your favorite editor, or set env vars
 RUST_LOG=info
 DISCORD_WEBHOOK="<path to discord webhook>"
-BROADCASTER_CHANNEL="<broadcaster name>"
 BROADCASTER_OAUTH="<broadcaster oauth token, need to have channel:moderate>"
 CHANNEL_BOT_NAME="<bot used in channel, optional>"
 # compile and run

@@ -1,10 +1,8 @@
-FROM rustembedded/cross:armv7-unknown-linux-gnueabihf-0.2.1
 
-# RUN apt-get update && \
-#     apt-get install --assume-yes openssl libssl-dev
-COPY openssl.sh /
-RUN bash /openssl.sh linux-armv4 arm-linux-gnueabihf-
+FROM ubuntu:latest
 
-ENV OPENSSL_DIR=/openssl \
-    OPENSSL_INCLUDE_DIR=/openssl/include \
-    OPENSSL_LIB_DIR=/openssl/lib
+COPY ./target/debug/twitch-discord-moderation .
+
+#COPY ./.env .
+#EXPOSE 8080
+CMD ./twitch-discord-moderation
