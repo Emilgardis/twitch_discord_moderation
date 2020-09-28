@@ -20,7 +20,8 @@ BROADCASTER_OAUTH="<broadcaster oauth token, need to have channel:moderate>"
 CHANNEL_BOT_NAME="<bot used in channel, optional>"
 # compile and run
 $ cargo run --release
-#
+# or use docker compose
+$ docker-compose up
 ```
 
 <h5> License </h5>
