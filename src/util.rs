@@ -231,8 +231,11 @@ pub fn build_logger(
     // TODO: Use paths
     use tracing_subscriber::prelude::__tracing_subscriber_field_MakeExt as _;
 
-    tracing_log::log_tracer::Builder::new().init().context("when building tracing builder")?;
-    let filter = tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info"))
+    tracing_log::log_tracer::Builder::new()
+        .init()
+        .context("when building tracing builder")?;
+    let filter = tracing_subscriber::EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info"))
         .add_directive("hyper=off".parse()?)
         .add_directive("sqlx=warn".parse()?)
         .add_directive("want=info".parse()?)

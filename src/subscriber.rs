@@ -15,7 +15,10 @@ impl Subscriber {
     pub async fn new() -> Result<Self, anyhow::Error> {
         let broadcaster_token = twitch_oauth2::UserToken::from_existing(
             twitch_oauth2::client::reqwest_http_client,
-            twitch_oauth2::AccessToken::new(std::env::var("BROADCASTER_OAUTH2").context("could not get env:BROADCASTER_OAUTH2")?),
+            twitch_oauth2::AccessToken::new(
+                std::env::var("BROADCASTER_OAUTH2")
+                    .context("could not get env:BROADCASTER_OAUTH2")?,
+            ),
             None,
         )
         .await
