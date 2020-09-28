@@ -7,6 +7,8 @@ use anyhow::Context;
 async fn main() {
     let _ = dotenv::dotenv().with_context(|| "couldn't load .env file"); //ignore error
     let _ = util::build_logger("logfile_warn", "logfile_trace");
+    tracing::info!("App started!");
+
     match run().await {
         Ok(_) => {}
         Err(err) => {
@@ -19,7 +21,6 @@ async fn main() {
 }
 
 pub async fn run() -> anyhow::Result<()> {
-    tracing::info!("App started!");
     let subscriber = subscriber::Subscriber::new()
         .await
         .context("when constructing subscriber")?;

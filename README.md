@@ -10,6 +10,8 @@ Install with [rustup.rs](https://rustup.rs/)
 $ git clone https://github.com/Emilgardis/twitch_discord_moderation.git
 # cd into it
 cd twitch_discord_moderation
+# set .env file to untracked
+git update-index --assume-unchanged .env
 # edit .env file or set ENV vars accordingly
 $ cat .env # do this with your favorite editor, or set env vars
 RUST_LOG=info
