@@ -1,7 +1,7 @@
 Twitch Discord Moderation | Sync mod actions with discord
 ============================================
 
-You'll need to install rust to run this bot.
+You'll need to install rust to run this bot. Or use docker
 
 Install with [rustup.rs](https://rustup.rs/)
 
