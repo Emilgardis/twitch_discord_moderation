@@ -13,4 +13,5 @@ coverage_reports/
 /cargo-timing*.html
 **/.cargo
 **/.*
+.env
 !.github/
