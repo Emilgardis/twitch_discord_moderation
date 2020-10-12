@@ -16,7 +16,7 @@ git update-index --assume-unchanged .env
 $ cat .env # do this with your favorite editor, or set env vars
 RUST_LOG=info
 DISCORD_WEBHOOK="<path to discord webhook>"
-BROADCASTER_OAUTH="<broadcaster oauth token, need to have channel:moderate>"
+BROADCASTER_OAUTH2="<broadcaster oauth token, need to have channel:moderate>"
 CHANNEL_BOT_NAME="<bot used in channel, optional>"
 # compile and run
 $ cargo run --release

@@ -28,7 +28,19 @@ impl Webhook {
                         todo!("bits not implemented")
                     }
                     twitch_api2::pubsub::TopicData::ChatModeratorActions { reply, .. } => {
-                        self.post_moderator_action(reply).await?;
+                        self.post_moderator_action(*reply).await?;
+                    }
+                    twitch_api2::pubsub::TopicData::ChannelPointsChannelV1 { reply, .. } => {
+                        tracing::info!(
+                            reply = tracing::field::debug(&*reply),
+                            "Channel points channel event!"
+                        );
+                    }
+                    twitch_api2::pubsub::TopicData::ChannelSubscribeEventsV1 { reply, .. } => {
+                        tracing::info!(
+                            reply = tracing::field::debug(&reply),
+                            "channel subscription event :D"
+                        );
                     }
                 },
             }
@@ -49,10 +61,10 @@ impl Webhook {
                 target_user_id,
                 ..
             } => {
-                let bot_name = std::env::var("CHANNEL_BOT_NAME");
+                let bot_name = std::env::var("CHANNEL_BOT_NAME").map(|s| s.to_lowercase());
                 let mut created_by_bot = false;
                 let real_created_by = match created_by.clone() {
-                    bot if bot_name.map_or(false, |s| s == bot.to_lowercase()) => match args
+                    bot if bot_name.map_or(false, |s| s == bot) => match args
                         .iter()
                         .last()
                         .map_or("", |s| s.as_str())
@@ -103,6 +115,7 @@ impl Webhook {
                             args.get(0).map_or("<unknown>", |u| &u),
                             target_user_id,
                         ),
+                        automod if automod.starts_with("automod") || automod.starts_with("add_blocked_term  ") => format!("👀_Twitch Moderation_ |\n*{0}*: /{1} ||{2}||", created_by, moderation_action.as_str(), args.join(" ")),
                         _ =>  format!("👀_Twitch Moderation_ |\n*{0}*: /{1} {2}", real_created_by, moderation_action.as_str(), args.join(" ")),
                     });
                     // .tts(false)

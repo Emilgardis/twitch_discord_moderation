@@ -26,7 +26,7 @@ pub async fn run() -> anyhow::Result<()> {
         .context("when constructing subscriber")?;
     let recv = subscriber.pubsub_channel.subscribe();
     let webhook = webhook::Webhook::new(
-        &std::env::var("DISCORD_WEBHOOK").context("couldn't get webhook env")?,
+        &std::env::var("DISCORD_WEBHOOK").context("couldn't get env:DISCORD_WEBHOOK")?,
     );
     tokio::select!(
     r = subscriber.run() => {

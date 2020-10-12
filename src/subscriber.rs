@@ -103,17 +103,40 @@ impl Subscriber {
             .parse()?;
         let topic = twitch_api2::pubsub::ChatModeratorActions {
             channel_id: id,
-            user_id: id,
+            user_id: Some(id),
         };
         s.send(Message::text(
             twitch_api2::pubsub::TopicSubscribe::Listen {
-                nonce: None,
+                nonce: Some("moderator".to_string()),
                 topics: vec![topic.into()],
                 auth_token: self.broadcaster_token.token().clone(),
             }
             .to_message()?,
         ))
         .await?;
+
+        let topic = twitch_api2::pubsub::ChannelPointsChannelV1 { channel_id: id };
+        s.send(Message::text(
+            twitch_api2::pubsub::TopicSubscribe::Listen {
+                nonce: Some("points".to_string()),
+                topics: vec![topic.into()],
+                auth_token: self.broadcaster_token.token().clone(),
+            }
+            .to_message()?,
+        ))
+        .await?;
+
+        // let topic = twitch_api2::pubsub::ChannelSubscribeEventsV1 { channel_id: id };
+        // s.send(Message::text(
+        //     twitch_api2::pubsub::TopicSubscribe::Listen {
+        //         nonce: Some("subscribe".to_string()),
+        //         topics: vec![topic.into()],
+        //         auth_token: self.broadcaster_token.token().clone(),
+        //     }
+        //     .to_message()?,
+        // ))
+        // .await?;
+
         Ok(s)
     }
 }
