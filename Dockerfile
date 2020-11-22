@@ -16,11 +16,11 @@ RUN ls
 COPY ./xtask/Cargo.toml ./xtask
 RUN cat ./xtask/Cargo.toml
 # Cache the deps
-RUN cargo build-deps --release
+RUN cargo build-deps --release 
 
 # Copy the src folders
 COPY ./src ./src/
 COPY ./xtask/src ./xtask/src/
 
 # run
-CMD cargo run --release
+CMD cargo run --release --locked

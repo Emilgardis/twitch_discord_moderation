@@ -101,7 +101,7 @@ impl Subscriber {
             .user_id
             .context("no userid")?
             .parse()?;
-        let topic = twitch_api2::pubsub::ChatModeratorActions {
+        let topic = twitch_api2::pubsub::moderation::ChatModeratorActions {
             channel_id: id,
             user_id: Some(id),
         };
@@ -109,22 +109,22 @@ impl Subscriber {
             twitch_api2::pubsub::TopicSubscribe::Listen {
                 nonce: Some("moderator".to_string()),
                 topics: vec![topic.into()],
-                auth_token: self.broadcaster_token.token().clone(),
+                auth_token: self.broadcaster_token.token().clone().secret().clone(),
             }
             .to_message()?,
         ))
         .await?;
 
-        let topic = twitch_api2::pubsub::ChannelPointsChannelV1 { channel_id: id };
-        s.send(Message::text(
-            twitch_api2::pubsub::TopicSubscribe::Listen {
-                nonce: Some("points".to_string()),
-                topics: vec![topic.into()],
-                auth_token: self.broadcaster_token.token().clone(),
-            }
-            .to_message()?,
-        ))
-        .await?;
+        // let topic = twitch_api2::pubsub::ChannelPointsChannelV1 { channel_id: id };
+        // s.send(Message::text(
+        //     twitch_api2::pubsub::TopicSubscribe::Listen {
+        //         nonce: Some("points".to_string()),
+        //         topics: vec![topic.into()],
+        //         auth_token: self.broadcaster_token.token().clone(),
+        //     }
+        //     .to_message()?,
+        // ))
+        // .await?;
 
         // let topic = twitch_api2::pubsub::ChannelSubscribeEventsV1 { channel_id: id };
         // s.send(Message::text(

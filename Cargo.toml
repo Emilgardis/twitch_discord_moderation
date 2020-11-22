@@ -20,8 +20,8 @@ ansi_term = "0.12.1"
 dotenv = "*"
 #twitch_api2 = {version = "0.5.0-alpha.1", features = ["reqwest_client", "helix"]}
 #twitch_oauth2 = {version = "0.5.0-alpha.1", features = ["reqwest_client"]}
-twitch_api2 = { git = "https://github.com/Emilgardis/twitch_api2.git", branch = "pubsub", features = ["reqwest_client", "helix"] }
-twitch_oauth2 = { git = "https://github.com/Emilgardis/twitch_api2.git", branch = "pubsub", features = ["reqwest_client"] }
+twitch_api2 = { git = "https://github.com/Emilgardis/twitch_api2.git", features = ["reqwest_client", "helix", "pubsub", "unsupported"] }
+twitch_oauth2 = { git = "https://github.com/Emilgardis/twitch_api2.git", features = ["reqwest_client"] }
 async-tungstenite = { version = "0.8.0", features = ["tokio-native-tls"]}
 reqwest = "0.10.8"
 url = "2.1.1"
