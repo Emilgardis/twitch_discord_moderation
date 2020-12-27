@@ -20,6 +20,7 @@ impl Subscriber {
                     .context("could not get env:BROADCASTER_OAUTH2")?,
             ),
             None,
+            None,
         )
         .await
         .context("could not get broadcaster token")?;
@@ -77,8 +78,7 @@ impl Subscriber {
     pub async fn connect(
         &self,
         url: &str,
-    ) -> Result<async_tungstenite::WebSocketStream<tokio_at::ConnectStream>, anyhow::Error>
-    {
+    ) -> Result<async_tungstenite::WebSocketStream<tokio_at::ConnectStream>, anyhow::Error> {
         tracing::debug!("connecting to {}", url);
         let (socket, _) = tokio_at::connect_async(url::Url::parse(url)?)
             .await
@@ -90,8 +90,7 @@ impl Subscriber {
     pub async fn connect_and_send(
         &self,
         url: &str,
-    ) -> Result<async_tungstenite::WebSocketStream<tokio_at::ConnectStream>, anyhow::Error>
-    {
+    ) -> Result<async_tungstenite::WebSocketStream<tokio_at::ConnectStream>, anyhow::Error> {
         let mut s = self.connect(url).await?;
 
         let id = self

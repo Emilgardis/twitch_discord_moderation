@@ -180,8 +180,7 @@ where
         ctx: &FmtContext<'_, S, N>,
         writer: &mut dyn core::fmt::Write,
         event: &tracing::Event<'_>,
-    ) -> core::fmt::Result
-    {
+    ) -> core::fmt::Result {
         // Aug 27 13:18:21.944 DEBG Getting broadcaster status, channel_id:
         tracing_subscriber::fmt::time::SystemTime.format_time(writer)?;
         write!(
@@ -226,8 +225,7 @@ impl<S: Subscriber + for<'a> LookupSpan<'a>> tracing_subscriber::Layer<S> for Fo
 pub fn build_logger(
     _warn_path: impl AsRef<Path>,
     _trace_path: impl AsRef<Path>,
-) -> Result<(), anyhow::Error>
-{
+) -> Result<(), anyhow::Error> {
     // TODO: Use paths
     use tracing_subscriber::prelude::__tracing_subscriber_field_MakeExt as _;
 

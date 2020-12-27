@@ -178,8 +178,7 @@ pub fn push(opt: &Opt, _: &Push) -> anyhow::Result<()> {
 pub fn compile_and_find_binary(
     target: &Target,
     opt: &Opt,
-) -> anyhow::Result<Option<std::path::PathBuf>>
-{
+) -> anyhow::Result<Option<std::path::PathBuf>> {
     let mut path = dbg!(get_workspace_root(target))?;
     match target {
         Target::Rpi => {

@@ -14,8 +14,7 @@ impl Webhook {
     pub async fn run(
         self,
         mut recv: sync::broadcast::Receiver<twitch_api2::pubsub::Response>,
-    ) -> Result<(), anyhow::Error>
-    {
+    ) -> Result<(), anyhow::Error> {
         while let Ok(msg) = recv.recv().await {
             match msg {
                 twitch_api2::pubsub::Response::Response(r) => {
@@ -52,17 +51,18 @@ impl Webhook {
     pub async fn post_moderator_action(
         &self,
         action: moderation::ChatModeratorActionsReply,
-    ) -> Result<(), anyhow::Error>
-    {
+    ) -> Result<(), anyhow::Error> {
         use twitch_api2::pubsub::moderation::ModerationActionCommand;
         match action {
-            moderation::ChatModeratorActionsReply::ModerationAction {
-                args,
-                created_by,
-                moderation_action,
-                target_user_id,
-                ..
-            } => {
+            moderation::ChatModeratorActionsReply::ModerationAction(
+                moderation::ModerationAction {
+                    args,
+                    created_by,
+                    moderation_action,
+                    target_user_id,
+                    ..
+                },
+            ) => {
                 let bot_name = std::env::var("CHANNEL_BOT_NAME").map(|s| s.to_lowercase());
                 let mut created_by_bot = false;
                 let real_created_by = match created_by.clone() {
@@ -100,11 +100,11 @@ impl Webhook {
                                 humantime::format_duration(std::time::Duration::new(u.parse().unwrap_or(0),0)).to_string()
                             ),
                         ),
-                        //ModerationActionCommand::Untimeout => format!("🔨_Twitch Moderation_ |\n*{0}*: /unban {1}\n*{1}:{2}* is no longer timed out",
-                        //    real_created_by,
-                        //    args.get(0).map_or("<unknown>", |u| &u),
-                        //    target_user_id,
-                        //),
+                        ModerationActionCommand::Untimeout => format!("🔨_Twitch Moderation_ |\n*{0}*: /unban {1}\n*{1}:{2}* is no longer timed out",
+                            real_created_by,
+                            args.get(0).map_or("<unknown>", |u| &u),
+                            target_user_id,
+                        ),
                         ModerationActionCommand::Ban  => format!("🏝️_Twitch Moderation_ |\n*{0}*: /ban {1}\n*{2}:{3}* is now banned",
                             real_created_by,
                             args.join(" "),
@@ -117,8 +117,16 @@ impl Webhook {
                             args.get(0).map_or("<unknown>", |u| &u),
                             target_user_id,
                         ),
-                        automod if automod.to_string().starts_with("automod") || automod.to_string().starts_with("add_blocked_term  ") => format!("👀_Twitch Moderation_ |\n*{0}*: /{1} ||{2}||", created_by, moderation_action, args.join(" ")),
-                        _ =>  format!("👀_Twitch Moderation_ |\n*{0}*: /{1} {2}", real_created_by, moderation_action, args.join(" ")),
+                        | moderation::ModerationActionCommand::ModifiedAutomodProperties
+                        | moderation::ModerationActionCommand::AutomodRejected
+                        | moderation::ModerationActionCommand::DeleteBlockedTerm
+                        | moderation::ModerationActionCommand::AddPermittedTerm
+                        | moderation::ModerationActionCommand::DeletePermittedTerm
+                        | moderation::ModerationActionCommand::AddBlockedTerm
+                        | moderation::ModerationActionCommand::ApproveAutomodMessage
+                        | moderation::ModerationActionCommand::DeniedAutomodMessage => format!("👀_Twitch Moderation_ |\n*{0}*: /{1} ||{2}||", created_by, moderation_action, args.join(" ")),
+                        _ => format!("👀_Twitch Moderation_ |\n*{0}*: /{1} {2}", real_created_by, moderation_action, args.join(" ")),
+
                     });
                     // .tts(false)
                     if created_by_bot {
@@ -132,6 +140,22 @@ impl Webhook {
                     //     .field("args", &format!("{:?}",args), true)
                     // )
                 } ).await.map_err(|e| anyhow::anyhow!("{}", e.to_string()))?;
+            }
+
+            moderation::ChatModeratorActionsReply::DenyUnbanRequest(unban_request)
+            | moderation::ChatModeratorActionsReply::ApproveUnbanRequest(unban_request) => {
+                self.webhook
+                    .send(|message| {
+                        message.content(&format!(
+                            "🔨_Twitch Moderation_ |\n*{0}*: /{1} {2} : {3}",
+                            unban_request.created_by_login,
+                            unban_request.moderation_action,
+                            unban_request.target_user_login,
+                            unban_request.moderator_message
+                        ))
+                    })
+                    .await
+                    .map_err(|e| anyhow::anyhow!("{}", e.to_string()))?;
             }
             _ => {}
         }
