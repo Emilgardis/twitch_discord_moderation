@@ -7,7 +7,7 @@ use twitch_api2::helix::Scope;
 use twitch_oauth2::TwitchToken;
 
 pub struct Subscriber {
-    broadcaster_token: twitch_oauth2::UserToken,
+    pub(crate) broadcaster_token: twitch_oauth2::UserToken,
     pub pubsub_channel: sync::broadcast::Sender<twitch_api2::pubsub::Response>,
 }
 

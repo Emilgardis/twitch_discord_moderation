@@ -2,7 +2,7 @@ pub mod subscriber;
 pub mod util;
 pub mod webhook;
 use anyhow::Context;
-
+use twitch_oauth2::TwitchToken;
 #[tokio::main]
 async fn main() {
     let _ = dotenv::dotenv().with_context(|| "couldn't load .env file"); //ignore error
@@ -27,6 +27,11 @@ pub async fn run() -> anyhow::Result<()> {
     let recv = subscriber.pubsub_channel.subscribe();
     let webhook = webhook::Webhook::new(
         &std::env::var("DISCORD_WEBHOOK").context("couldn't get env:DISCORD_WEBHOOK")?,
+        subscriber
+            .broadcaster_token
+            .login()
+            .ok_or_else(|| anyhow::anyhow!("could not get login for broadcaster"))?
+            .to_string(),
     );
     tokio::select!(
     r = subscriber.run() => {

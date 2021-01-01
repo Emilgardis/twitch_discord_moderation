@@ -2,12 +2,21 @@ use tokio::sync;
 use twitch_api2::pubsub::moderation;
 pub struct Webhook {
     webhook: discord_webhook::Webhook,
+    broadcaster: String,
 }
 
 impl Webhook {
-    pub fn new(url: &str) -> Webhook {
+    fn add_streamcardlink(&self, user_login: &str) -> String {
+        format!(
+            "[{1}](<https://www.twitch.tv/popout/{0}/viewercard/{1}?popout=>)",
+            self.broadcaster, user_login
+        )
+    }
+
+    pub fn new(url: &str, broadcaster: String) -> Webhook {
         Webhook {
             webhook: discord_webhook::Webhook::from_url(url),
+            broadcaster,
         }
     }
 
@@ -87,14 +96,14 @@ impl Webhook {
                     message.content(&match &moderation_action {
                         ModerationActionCommand::Delete =>  { format!("❌_Twitch Moderation_ |\n*{0}*: /delete {1} ||{2}||\n*{1}:{3}* message deleted",
                             created_by, // Not real created by, since delete doesn't carry that information
-                            args.get(0).map_or("<unknown>", |u| &u),
+                            self.add_streamcardlink(args.get(0).map_or("<unknown>", |u| &u)),
                             args[1..args.len().checked_sub(1).unwrap_or(1)].join(" "),
                             target_user_id,
                         )},
                         ModerationActionCommand::Timeout => format!("🔨_Twitch Moderation_ |\n*{0}*: /timeout {1}\n*{2}:{3}* has been timed out for {4}",
                             real_created_by,
                             args.join(" "),
-                            args.get(0).map_or("<unknown>", |u| &u),
+                            self.add_streamcardlink(args.get(0).map_or("<unknown>", |u| &u)),
                             target_user_id,
                             args.get(1).map_or(String::from("<unknown>"), |u|
                                 humantime::format_duration(std::time::Duration::new(u.parse().unwrap_or(0),0)).to_string()
@@ -102,19 +111,19 @@ impl Webhook {
                         ),
                         ModerationActionCommand::Untimeout => format!("🔨_Twitch Moderation_ |\n*{0}*: /unban {1}\n*{1}:{2}* is no longer timed out",
                             real_created_by,
-                            args.get(0).map_or("<unknown>", |u| &u),
+                            self.add_streamcardlink(args.get(0).map_or("<unknown>", |u| &u)),
                             target_user_id,
                         ),
                         ModerationActionCommand::Ban  => format!("🏝️_Twitch Moderation_ |\n*{0}*: /ban {1}\n*{2}:{3}* is now banned",
                             real_created_by,
                             args.join(" "),
-                            args.get(0).map_or("<unknown>", |u| &u),
+                            self.add_streamcardlink(args.get(0).map_or("<unknown>", |u| &u)),
                             target_user_id,
                         ),
                         ModerationActionCommand::Unban => format!("🏝️_Twitch Moderation_ |\n*{0}*: /unban {1}\n*{2}:{3}* is no longer banned",
                             real_created_by,
                             args.join(" "),
-                            args.get(0).map_or("<unknown>", |u| &u),
+                            self.add_streamcardlink(args.get(0).map_or("<unknown>", |u| &u)),
                             target_user_id,
                         ),
                         | moderation::ModerationActionCommand::ModifiedAutomodProperties
