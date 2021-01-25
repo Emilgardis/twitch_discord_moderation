@@ -39,12 +39,12 @@ impl Subscriber {
         let mut ping_timer = tokio::time::interval(std::time::Duration::new(5 * 30, 0));
         loop {
             tokio::select!(
-                    _ = ping_timer.tick() => {
+                    _ = Box::pin(ping_timer.tick()) => {
                         tracing::trace!("sending ping");
                         s.send(Message::Ping(vec![])).await?;
                     },
 
-                    Some(msg) = tokio::stream::StreamExt::next(&mut s) => {
+                    Some(msg) = futures::StreamExt::next(&mut s) => {
                         let span = tracing::info_span!("message received", raw_message = ?msg);
                         async {
                             let msg = match msg {
@@ -102,7 +102,7 @@ impl Subscriber {
             .parse()?;
         let topic = twitch_api2::pubsub::moderation::ChatModeratorActions {
             channel_id: id,
-            user_id: Some(id),
+            user_id: id,
         };
         s.send(Message::text(
             twitch_api2::pubsub::TopicSubscribe::Listen {
@@ -110,7 +110,7 @@ impl Subscriber {
                 topics: vec![topic.into()],
                 auth_token: self.broadcaster_token.token().clone().secret().clone(),
             }
-            .to_message()?,
+            .to_command()?,
         ))
         .await?;
 
@@ -121,7 +121,7 @@ impl Subscriber {
         //         topics: vec![topic.into()],
         //         auth_token: self.broadcaster_token.token().clone(),
         //     }
-        //     .to_message()?,
+        //     .to_command()?,
         // ))
         // .await?;
 
@@ -132,7 +132,7 @@ impl Subscriber {
         //         topics: vec![topic.into()],
         //         auth_token: self.broadcaster_token.token().clone(),
         //     }
-        //     .to_message()?,
+        //     .to_command()?,
         // ))
         // .await?;
 

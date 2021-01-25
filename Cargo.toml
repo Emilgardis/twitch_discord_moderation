@@ -8,29 +8,29 @@ default-run = "twitch-discord-moderation"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-tokio = { version = "0.2", features = ["full"] }
-tracing = "0.1.19"
-tracing-subscriber = "0.2.11"
+tokio = { version = "1.0.1", features = ["full"] }
+tracing = "0.1.22"
+tracing-subscriber = "0.2.15"
 tracing-futures = "0.2.4"
 tracing-log = "0.1.1"
-tracing-appender = "0.1.1"
-anyhow = "1.0.32"
-chrono = "0.4.15"
+tracing-appender = "0.1.2"
+anyhow = "1.0.38"
+chrono = "0.4.19"
 ansi_term = "0.12.1"
-dotenv = "*"
-#twitch_api2 = {version = "0.5.0-alpha.1", features = ["reqwest_client", "helix"]}
-#twitch_oauth2 = {version = "0.5.0-alpha.1", features = ["reqwest_client"]}
-twitch_api2 = { git = "https://github.com/Emilgardis/twitch_api2.git", features = ["reqwest_client", "helix", "pubsub", "unsupported"] }
-twitch_oauth2 = { git = "https://github.com/Emilgardis/twitch_api2.git", features = ["reqwest_client"] }
-async-tungstenite = { version = "0.8.0", features = ["tokio-native-tls"]}
-reqwest = "0.10.8"
-url = "2.1.1"
-futures = "0.3.5"
-discord_webhook = {version = "1.0.1", package = "webhook" }
-humantime = "2.0.1"
+dotenv = "0.15.0"
+twitch_api2 = { version = "0.5.0-alpha.3", features = ["reqwest_client", "helix", "pubsub"] }
+twitch_oauth2 = { version = "0.5.0-alpha.3", features = ["reqwest_client"] }
+#twitch_api2 = { git = "https://github.com/Emilgardis/twitch_api2.git", features = ["reqwest_client", "helix", "pubsub", "unsupported"] }
+#twitch_oauth2 = { git = "https://github.com/Emilgardis/twitch_api2.git", features = ["reqwest_client"] }
+async-tungstenite = { version = "0.12.0", features = ["tokio-native-tls"] }
+reqwest = "0.11.0"
+url = "2.2.0"
+futures = "0.3.10"
+discord_webhook = { git = "https://github.com/thoo0224/webhook-rs", rev = "43aaef6", package = "webhook" }
+humantime = "2.1.0"
 
 [target.'cfg(not(any(windows, unix, macos)))'.dependencies]
-reqwest = { version = '0.10', features = ["rustls-tls"]}
+reqwest = { version = "0.11.0", features = ["rustls-tls"] }
 
 [workspace]
 members = [
