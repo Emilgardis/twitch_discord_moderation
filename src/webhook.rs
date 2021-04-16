@@ -20,6 +20,7 @@ impl Webhook {
         }
     }
 
+    #[tracing::instrument(name = "webhook", skip(self, recv))]
     pub async fn run(
         self,
         mut recv: sync::broadcast::Receiver<twitch_api2::pubsub::Response>,
@@ -52,11 +53,18 @@ impl Webhook {
                     }
                     _ => {}
                 },
+                twitch_api2::pubsub::Response::Pong => {
+                    tracing::error!("PONG from twitch :)")
+                }
+                twitch_api2::pubsub::Response::Reconnect => {
+                    tracing::error!("Twitch needs to reconnect")
+                }
             }
         }
         Ok(())
     }
 
+    #[tracing::instrument(skip(self))]
     pub async fn post_moderator_action(
         &self,
         action: moderation::ChatModeratorActionsReply,

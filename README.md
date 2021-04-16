@@ -20,9 +20,22 @@ BROADCASTER_OAUTH2="<broadcaster oauth token, need to have channel:moderate>"
 CHANNEL_BOT_NAME="<bot used in channel, optional>"
 # compile and run
 $ cargo run --release
+```
 # or use docker compose
 $ docker-compose up
 ```
+
+This application also supports getting an oauth2 token from an external service on url `OAUTH2_SERVICE_URL`. This service should return a token in a json body where the token string is in the field `access_token` or `token`, if not, specify the path with 
+
+```
+$ cat .env
+RUST_LOG=info
+DISCORD_WEBHOOK="<path to discord webhook>"
+OAUTH2_SERVICE_URL="<path to the service, include query parameters if needed to get the correct token>"
+OAUTH2_SERVICE_KEY="<your secure bearer token to authenticate on the service>"
+CHANNEL_BOT_NAME="<bot used in channel, optional>"
+```
+
 
 <h5> License </h5>
 

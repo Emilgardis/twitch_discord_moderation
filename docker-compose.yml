@@ -1,13 +1,10 @@
 version: "3"
 
 services:
-  echoserver:
-    build:
-      context: .
+  twitch-discord-moderation:
+    build: ./
+    image: twitch-discord-moderation:latest
+    env_file: .env
     environment: 
-      RUST_LOG: "trace"
-    volumes: 
-      - type: bind
-        source: ./.env
-        target: /app/twitch-discord-moderation/.env
-    restart: unless-stopped
+      RUST_LOG: "info"
+    restart: "no"

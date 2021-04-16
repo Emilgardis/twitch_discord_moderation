@@ -206,7 +206,7 @@ where
 
         write!(writer, "{} ", event_meta.target())?;
         write!(writer, "{}", Color::Fixed(8).suffix())?;
-        write!(writer, "{} ", Color::Black.paint("|:"))?;
+        write!(writer, "{} ", Color::Fixed(250).paint("|:"))?;
         let full_ctx = FullCtx::new(ctx, event.parent());
         write!(writer, "{}\n└─\t", full_ctx)?;
         let mut fields = EventFieldVisitor {
@@ -237,10 +237,9 @@ pub fn build_logger(
         .add_directive("hyper=off".parse()?)
         .add_directive("sqlx=warn".parse()?)
         .add_directive("want=info".parse()?)
-        .add_directive("async_tungstenite=debug".parse()?)
-        .add_directive("tungstenite=debug".parse()?)
-        //.add_directive("reqwest=info".parse()?)
-        //.add_directive("twitchchat=info".parse()?)
+        .add_directive("async_tungstenite=info".parse()?)
+        .add_directive("tungstenite=info".parse()?)
+        .add_directive("reqwest=info".parse()?)
         .add_directive("mio=off".parse()?);
     let field_formatter = tracing_subscriber::fmt::format::debug_fn(|writer, field, value| {
         write!(

@@ -3,53 +3,184 @@ use async_tungstenite::{tokio as tokio_at, tungstenite::Message};
 use futures::prelude::*;
 use tokio::sync;
 use tracing_futures::Instrument;
-use twitch_api2::helix::Scope;
-use twitch_oauth2::TwitchToken;
+use twitch_oauth2::{TwitchToken, UserToken};
 
 pub struct Subscriber {
-    pub(crate) broadcaster_token: twitch_oauth2::UserToken,
+    pub(crate) access_token: twitch_oauth2::UserToken,
+    pub broadcaster_id: twitch_api2::types::UserId,
+    pub broadcaster_login: twitch_api2::types::UserName,
+    pub token_id: twitch_api2::types::UserId,
     pub pubsub_channel: sync::broadcast::Sender<twitch_api2::pubsub::Response>,
 }
 
-impl Subscriber {
-    pub async fn new() -> Result<Self, anyhow::Error> {
-        let broadcaster_token = twitch_oauth2::UserToken::from_existing(
-            twitch_oauth2::client::reqwest_http_client,
-            twitch_oauth2::AccessToken::new(
-                std::env::var("BROADCASTER_OAUTH2")
-                    .context("could not get env:BROADCASTER_OAUTH2")?,
-            ),
-            None,
-            None,
-        )
+async fn get_env_token(token_env: &'static str) -> Result<UserToken, anyhow::Error> {
+    let token = std::env::var(token_env).context(format!("could not get env:{}", token_env))?;
+    make_token(token)
         .await
-        .context("could not get broadcaster token")?;
+        .context(format!("when trying to use env:{} as token", token_env))
+}
+
+pub async fn make_token(token: String) -> Result<UserToken, anyhow::Error> {
+    UserToken::from_existing(
+        twitch_oauth2::client::reqwest_http_client,
+        twitch_oauth2::AccessToken::new(token),
+        None,
+        None,
+    )
+    .await
+    .context("could not make broadcaster token")
+    .map_err(Into::into)
+}
+
+#[derive(Debug, serde::Deserialize)]
+struct OauthServiceResponse {
+    #[serde(alias = "token")]
+    access_token: String,
+    #[serde(flatten)]
+    other: std::collections::HashMap<String, serde_json::Value>,
+}
+
+pub async fn get_access_token(client: &reqwest::Client) -> Result<UserToken, anyhow::Error> {
+    if std::env::var("OAUTH2_TOKEN").is_ok() {
+        get_env_token("OAUTH2_TOKEN").await
+    } else if let Ok(oauth_service_url) = std::env::var("OAUTH2_SERVICE_URL") {
+        tracing::info!(
+            "using oauth service on `{}` to get oauth token",
+            oauth_service_url
+        );
+
+        let mut request = client.get(&oauth_service_url);
+        if let Ok(key) = std::env::var("OAUTH2_SERVICE_AUTH_KEY") {
+            request = request.bearer_auth(key);
+        }
+        let request = request.build()?;
+        tracing::debug!("request: {:?}", request);
+
+        match client.execute(request).await {
+            Ok(response)
+                if !(response.status().is_client_error()
+                    || response.status().is_server_error()) =>
+            {
+                let service_response: OauthServiceResponse = response
+                    .json()
+                    .await
+                    .context("when transforming oauth service response to json")?;
+                make_token(service_response.access_token).await
+            }
+            Ok(response_error) => {
+                let status = response_error.status();
+                let error = response_error.text().await?;
+                anyhow::bail!(
+                    "oauth service returned error code: {} with body: {:?}",
+                    status,
+                    error
+                );
+            }
+            Err(e) => {
+                return Err(e)
+                    .with_context(|| format!("calling oauth service on `{}`", &oauth_service_url))
+            }
+        }
+    } else {
+        anyhow::bail!("no token specified for use, see the documentation")
+    }
+}
+
+impl Subscriber {
+    #[tracing::instrument]
+    pub async fn new() -> Result<Self, anyhow::Error> {
+        let client = reqwest::Client::default();
+        let access_token = get_access_token(&client).await?;
+        let token_id = access_token
+            .validate_token(twitch_oauth2::client::reqwest_http_client)
+            .await?
+            .user_id
+            .context("no user id found for oauth2 token, this is a bug")?;
+        // if env:BROADCASTER_ID or BROADCASTER_LOGIN are not set, then assume we're using the token owner as channel
+        let (broadcaster_id, broadcaster_login) = if let Ok(id) = std::env::var("BROADCASTER_ID") {
+            // use access token to fetch broadcaster login
+            (
+                id.clone(),
+                twitch_api2::HelixClient::with_client(client.clone())
+                    .get_user_from_id(id.clone(), &access_token)
+                    .await
+                    .context("when calling twitch api")?
+                    .with_context(|| format!("there is no user id {}", id))?
+                    .login,
+            )
+        } else if let Ok(login) = std::env::var("BROADCASTER_LOGIN") {
+            // use access token to fetch broadcaster id
+            (
+                twitch_api2::HelixClient::with_client(client.clone())
+                    .get_user_from_login(login.clone(), &access_token)
+                    .await
+                    .context("when calling twitch api")?
+                    .with_context(|| format!("there is no user with login name {}", login))?
+                    .id,
+                login,
+            )
+        } else {
+            // FIXME: Use the same client?
+            tracing::info!("Using the same user_id as token for channel id");
+            (
+                token_id.clone(),
+                access_token
+                    .login()
+                    .context("no user login attached to token")?
+                    .to_string(),
+            )
+        };
         Ok(Subscriber {
-            broadcaster_token,
+            access_token,
+            broadcaster_id,
+            broadcaster_login,
+            token_id,
             pubsub_channel: sync::broadcast::channel(16).0,
         })
     }
 
-    pub async fn run(self) -> Result<(), anyhow::Error> {
+    #[tracing::instrument(name = "subscriber", skip(self), fields(
+        self.broadcaster_id = %self.broadcaster_id,
+        self.broadcaster_login = %self.broadcaster_login,
+        self.token_id = %self.token_id,
+    ))]
+    pub async fn run(mut self) -> Result<(), anyhow::Error> {
         // Send ping every 5 minutes...
         let mut s = self
             .connect_and_send(twitch_api2::TWITCH_PUBSUB_URL)
             .await?;
 
-        let mut ping_timer = tokio::time::interval(std::time::Duration::new(5 * 30, 0));
+        let ping_timer = tokio::time::sleep(
+            std::time::Duration::new(4 * 60, 0)
+                + std::time::Duration::from_millis(fastrand::u64(0..4000)),
+        );
+        tokio::pin!(ping_timer);
+        let token_timer = tokio::time::sleep(
+            self.access_token
+                .expires_in()
+                .checked_sub(std::time::Duration::from_secs(60))
+                .unwrap_or_default(),
+        );
+        tokio::pin!(token_timer);
         loop {
             tokio::select!(
-                    _ = Box::pin(ping_timer.tick()) => {
-                        tracing::trace!("sending ping");
-                        s.send(Message::Ping(vec![])).await?;
+                    _ = &mut token_timer => {
+                        tracing::info!("token should now be expired");
+                        self.access_token = get_access_token(&reqwest::Client::default()).await?;
+                        token_timer.as_mut().reset(tokio::time::Instant::now() + self.access_token.expires_in());
                     },
-
+                    _ = &mut ping_timer => {
+                        tracing::trace!("sending ping");
+                        s.send(Message::text(r#"{"type": "PING"}"#)).await?;
+                        ping_timer.as_mut().reset(tokio::time::Instant::now() + std::time::Duration::new(4 * 60, 0)
+                        + std::time::Duration::from_millis(fastrand::u64(0..4000)));
+                    },
                     Some(msg) = futures::StreamExt::next(&mut s) => {
                         let span = tracing::info_span!("message received", raw_message = ?msg);
                         async {
                             let msg = match msg {
-                                Err(async_tungstenite::tungstenite::Error::Protocol(e)) => {
-                                    tracing::warn!("{:?}", async_tungstenite::tungstenite::Error::Protocol(e.clone()));
+                                Err(async_tungstenite::tungstenite::Error::Protocol(async_tungstenite::tungstenite::error::ProtocolError::ResetWithoutClosingHandshake)) => {
+                                    tracing::warn!("connection was sent an unexpected frame or was reset, reestablishing it");
                                     s = self.connect_and_send(twitch_api2::TWITCH_PUBSUB_URL).await?;
 
                                     return Ok(())
@@ -60,13 +191,19 @@ impl Subscriber {
                             match msg {
                                 Message::Text(msg) => {
                                     let response = twitch_api2::pubsub::Response::parse(&msg)?;
+                                    if let twitch_api2::pubsub::Response::Reconnect = response {
+                                        s = self.connect_and_send(twitch_api2::TWITCH_PUBSUB_URL).await?;
+                                    }
                                     tracing::info!(message = ?response);
                                     self.pubsub_channel
                                         .send(response)
                                         .map_err(|e| anyhow::anyhow!("{:?}", e))?;
                                 }
                                 Message::Close(_) => {return Err(anyhow::anyhow!("twitch requested us to close the shop..."))}
-                                _ => {}
+                                Message::Ping(..) | Message::Pong(..) => {}
+                                Message::Binary(v) => {
+                                    tracing::debug!("got unknown binary message {:2x?}", v);
+                                }
                             }
                             Ok(())
                         }.instrument(span).await?;
@@ -80,35 +217,39 @@ impl Subscriber {
         url: &str,
     ) -> Result<async_tungstenite::WebSocketStream<tokio_at::ConnectStream>, anyhow::Error> {
         tracing::debug!("connecting to {}", url);
-        let (socket, _) = tokio_at::connect_async(url::Url::parse(url)?)
+        let config = async_tungstenite::tungstenite::protocol::WebSocketConfig {
+            max_send_queue: None,
+            max_message_size: Some(64 << 20), // 64 MiB
+            max_frame_size: Some(16 << 20),   // 16 MiB
+            accept_unmasked_frames: true,
+        };
+        let (socket, _) = tokio_at::connect_async_with_config(url::Url::parse(url)?, Some(config))
             .await
             .context("Can't connect")?;
 
         Ok(socket)
     }
 
+    #[tracing::instrument(skip(self))]
     pub async fn connect_and_send(
         &self,
         url: &str,
     ) -> Result<async_tungstenite::WebSocketStream<tokio_at::ConnectStream>, anyhow::Error> {
         let mut s = self.connect(url).await?;
-
-        let id = self
-            .broadcaster_token
-            .validate_token(twitch_oauth2::client::reqwest_http_client)
-            .await?
-            .user_id
-            .context("no userid")?
-            .parse()?;
         let topic = twitch_api2::pubsub::moderation::ChatModeratorActions {
-            channel_id: id,
-            user_id: id,
+            channel_id: self.broadcaster_id.parse()?,
+            user_id: self.token_id.parse()?,
         };
+        // if scopes doesn't contain required scope, then bail
+        if !<twitch_api2::pubsub::moderation::ChatModeratorActions as twitch_api2::pubsub::Topic>::SCOPE.iter().all(|s| self.access_token.scopes().contains(&s)) {
+            tracing::info!("token has scopes: {:?}", self.access_token.scopes());
+            anyhow::bail!("access token does not have valid scopes, required scope(s): {:?}", <twitch_api2::pubsub::moderation::ChatModeratorActions as twitch_api2::pubsub::Topic>::SCOPE.iter().map(|s| s.to_string()).collect::<Vec<_>>());
+        }
         s.send(Message::text(
             twitch_api2::pubsub::TopicSubscribe::Listen {
                 nonce: Some("moderator".to_string()),
                 topics: vec![topic.into()],
-                auth_token: self.broadcaster_token.token().clone().secret().clone(),
+                auth_token: self.access_token.token().clone().secret().clone(),
             }
             .to_command()?,
         ))

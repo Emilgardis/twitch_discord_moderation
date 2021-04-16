@@ -1,26 +1,28 @@
-FROM rustlang/rust:nightly as rust
-
-# Cache deps
+# syntax = docker/dockerfile:experimental
+FROM rustlang/rust:nightly as planner
 WORKDIR /app
-#RUN sudo chown -R rust:rust .
-RUN USER=root cargo new twitch-discord-moderation
+RUN --mount=type=cache,target=$CARGO_HOME/registry --mount=type=cache,target=$CARGO_HOME/bin cargo install cargo-chef
+COPY . .
+RUN ls -la
+RUN cargo chef prepare  --recipe-path recipe.json
 
-# Install cache-deps
-RUN cargo install --git https://github.com/romac/cargo-build-deps.git
+FROM rustlang/rust:nightly as cacher
+WORKDIR /app
+RUN --mount=type=cache,target=$CARGO_HOME/registry --mount=type=cache,target=$CARGO_HOME/bin cargo install cargo-chef
+ARG cargo_args=""
+COPY --from=planner /app/recipe.json recipe.json
+RUN --mount=type=cache,target=$CARGO_HOME/registry cargo chef cook $cargo_args --recipe-path recipe.json -p twitch-discord-moderation
 
-WORKDIR /app/twitch-discord-moderation
-RUN mkdir -p xtask/src/
-# Copy the Cargo tomls
-COPY ./Cargo.toml ./Cargo.lock ./
-RUN ls
-COPY ./xtask/Cargo.toml ./xtask
-RUN cat ./xtask/Cargo.toml
-# Cache the deps
-RUN cargo build-deps --release 
+# TODO specify cross compilation instead
+FROM rustlang/rust:nightly as builder
+WORKDIR /app
+COPY . .
+# Copy over the cached dependencies
+COPY --from=cacher /app/target target
+COPY --from=cacher $CARGO_HOME $CARGO_HOME
+RUN --mount=type=cache,target=$CARGO_HOME/registry cargo build $cargo_args --bin twitch-discord-moderation --out-dir ./bin/ -Z unstable-options
 
-# Copy the src folders
-COPY ./src ./src/
-COPY ./xtask/src ./xtask/src/
-
-# run
-CMD cargo run --release --locked
+FROM rustlang/rust:nightly as runtime
+WORKDIR /app
+COPY --from=builder /app/bin/twitch-discord-moderation /app/
+ENTRYPOINT "/app/twitch-discord-moderation"
