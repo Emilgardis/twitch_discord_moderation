@@ -1,15 +1,14 @@
 # syntax = docker/dockerfile:experimental
 FROM --platform=$BUILDPLATFORM rust:latest as planner
-ARG CARGO_NET_GIT_FETCH_WITH_CLI=1
 WORKDIR /app
-RUN cargo install cargo-chef
+RUN --mount=type=cache,target=$CARGO_HOME/registry --mount=type=cache,target=$CARGO_HOME/bin cargo install cargo-chef
 COPY . .
 RUN ls -la
 RUN cargo chef prepare  --recipe-path recipe.json
 
 FROM rust:latest as cacher
 WORKDIR /app
-RUN cargo install cargo-chef
+RUN --mount=type=cache,target=$CARGO_HOME/registry --mount=type=cache,target=$CARGO_HOME/bin cargo install cargo-chef
 COPY --from=planner /app/recipe.json recipe.json
 RUN --mount=type=cache,target=$CARGO_HOME/registry cargo chef cook --release --recipe-path recipe.json -p twitch-discord-moderation
 
