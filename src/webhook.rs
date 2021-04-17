@@ -2,21 +2,23 @@ use tokio::sync;
 use twitch_api2::pubsub::moderation;
 pub struct Webhook {
     webhook: discord_webhook::Webhook,
-    broadcaster: String,
+    channel_login: String,
+    channel_bot_name: Option<String>,
 }
 
 impl Webhook {
     fn add_streamcardlink(&self, user_login: &str) -> String {
         format!(
             "[{1}](<https://www.twitch.tv/popout/{0}/viewercard/{1}?popout=>)",
-            self.broadcaster, user_login
+            self.channel_login, user_login
         )
     }
 
-    pub fn new(url: &str, broadcaster: String) -> Webhook {
+    pub fn new(channel_login: String, opts: &crate::Opts) -> Webhook {
         Webhook {
-            webhook: discord_webhook::Webhook::from_url(url),
-            broadcaster,
+            webhook: discord_webhook::Webhook::from_url(&opts.discord_webhook),
+            channel_login,
+            channel_bot_name: opts.channel_bot_name.clone(),
         }
     }
 
@@ -33,25 +35,12 @@ impl Webhook {
                     }
                 }
                 twitch_api2::pubsub::Response::Message { data } => match data {
-                    twitch_api2::pubsub::TopicData::ChannelBitsEventsV2 { .. } => {
-                        todo!("bits not implemented")
-                    }
                     twitch_api2::pubsub::TopicData::ChatModeratorActions { reply, .. } => {
                         self.post_moderator_action(*reply).await?;
                     }
-                    twitch_api2::pubsub::TopicData::ChannelPointsChannelV1 { reply, .. } => {
-                        tracing::info!(
-                            reply = tracing::field::debug(&*reply),
-                            "Channel points channel event!"
-                        );
+                    message => {
+                        tracing::warn!("got unknown message: {:?}", message)
                     }
-                    twitch_api2::pubsub::TopicData::ChannelSubscribeEventsV1 { reply, .. } => {
-                        tracing::info!(
-                            reply = tracing::field::debug(&reply),
-                            "channel subscription event :D"
-                        );
-                    }
-                    _ => {}
                 },
                 twitch_api2::pubsub::Response::Pong => {
                     tracing::error!("PONG from twitch :)")
@@ -80,7 +69,7 @@ impl Webhook {
                     ..
                 },
             ) => {
-                let bot_name = std::env::var("CHANNEL_BOT_NAME").map(|s| s.to_lowercase());
+                let bot_name = self.channel_bot_name.clone().map(|s| s.to_lowercase());
                 let mut created_by_bot = false;
                 let real_created_by = match created_by.clone() {
                     bot if bot_name.map_or(false, |s| s == bot) => match args
@@ -95,7 +84,7 @@ impl Webhook {
                             created_by_bot = moderation_action != ModerationActionCommand::Delete;
                             user.to_string()
                         }
-                        _ => std::env::var("CHANNEL_BOT_NAME").unwrap(), // Checked above
+                        _ => self.channel_bot_name.clone().unwrap(), // Checked above
                     },
                     other => other,
                 };
@@ -147,7 +136,7 @@ impl Webhook {
                     });
                     // .tts(false)
                     if created_by_bot {
-                        message.username(&format!("{}@twitch via {}", real_created_by, std::env::var("CHANNEL_BOT_NAME").unwrap_or_else(|_| String::from("<bot>"))))
+                        message.username(&format!("{}@twitch via {}", real_created_by, self.channel_bot_name.clone().unwrap_or_else(|| String::from("<bot>"))))
                     } else {
                         message.username(&format!("{}@twitch", real_created_by))
                     }

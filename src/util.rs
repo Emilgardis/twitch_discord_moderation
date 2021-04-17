@@ -10,9 +10,7 @@ use tracing_log::NormalizeEvent;
 use ansi_term::{Color, Style};
 use anyhow::Context;
 use fmt::{time::FormatTime, FormattedFields};
-use std::convert::AsRef;
 use std::fmt::Write;
-use std::path::Path;
 use tracing::{
     field::{Field, Visit},
     Level, Subscriber,
@@ -222,11 +220,7 @@ where
 
 impl<S: Subscriber + for<'a> LookupSpan<'a>> tracing_subscriber::Layer<S> for Formatter {}
 /// Build a logger that does file and term logging.
-pub fn build_logger(
-    _warn_path: impl AsRef<Path>,
-    _trace_path: impl AsRef<Path>,
-) -> Result<(), anyhow::Error> {
-    // TODO: Use paths
+pub fn build_logger() -> Result<(), anyhow::Error> {
     use tracing_subscriber::prelude::__tracing_subscriber_field_MakeExt as _;
 
     tracing_log::log_tracer::Builder::new()
