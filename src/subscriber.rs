@@ -192,7 +192,7 @@ impl Subscriber {
                                     if let twitch_api2::pubsub::Response::Reconnect = response {
                                         s = self.connect_and_send(twitch_api2::TWITCH_PUBSUB_URL).await?;
                                     }
-                                    tracing::info!(message = ?response);
+                                    tracing::debug!(message = ?response);
                                     self.pubsub_channel
                                         .send(response)
                                         .map_err(|e| anyhow::anyhow!("{:?}", e))?;

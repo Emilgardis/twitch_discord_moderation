@@ -43,7 +43,7 @@ impl Webhook {
                     }
                 },
                 twitch_api2::pubsub::Response::Pong => {
-                    tracing::error!("PONG from twitch :)")
+                    tracing::debug!("PONG from twitch :)")
                 }
                 twitch_api2::pubsub::Response::Reconnect => {
                     tracing::error!("Twitch needs to reconnect")
