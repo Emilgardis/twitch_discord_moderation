@@ -11,6 +11,10 @@ group "default" {
 }
 
 target "app" {
-    tags = ["docker.io/emilgardis/${DOCKER_REPO}:${DOCKER_TAG}"]
-    platforms = ["linux/amd64", "linux/arm64", "linux/arm/v7"]
+    tags = ["emilgardis/${DOCKER_REPO}:${DOCKER_TAG}"]
+    platforms = ["linux/amd64"]
+}
+target "app-release" {
+    inherits = ["app"]
+    platforms = ["linux/amd64", "linux/arm64"]
 }

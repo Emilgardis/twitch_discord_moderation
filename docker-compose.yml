@@ -2,8 +2,7 @@ version: "3"
 
 services:
   twitch-discord-moderation:
-    build: ./
-    image: twitch-discord-moderation:latest
+    image: emilgardis/twitch-discord-moderation:latest
     env_file: .env
     environment: 
       RUST_LOG: "info"
