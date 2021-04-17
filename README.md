@@ -14,9 +14,8 @@ cd twitch_discord_moderation
 git update-index --assume-unchanged .env
 # edit .env file or set ENV vars accordingly
 $ cat .env # do this with your favorite editor, or set env vars
-RUST_LOG=info
 DISCORD_WEBHOOK="<path to discord webhook>"
-BROADCASTER_OAUTH2="<broadcaster oauth token, need to have channel:moderate>"
+ACCESS_TOKEN="<broadcaster oauth token, need to have channel:moderate>"
 CHANNEL_BOT_NAME="<bot used in channel, optional>"
 # compile and run
 $ cargo run --release
@@ -25,15 +24,39 @@ $ cargo run --release
 $ docker-compose up
 ```
 
-This application also supports getting an oauth2 token from an external service on url `OAUTH2_SERVICE_URL`. This service should return a token in a json body where the token string is in the field `access_token` or `token`, if not, specify the path with 
+This application also supports getting an oauth2 token from an external service on url `OAUTH2_SERVICE_URL`. This service should return a token in a json body where the token string is in the field `access_token` or `token`, if not, specify the path with `OAUTH2_SERVICE_JQ`.
 
 ```
-$ cat .env
-RUST_LOG=info
-DISCORD_WEBHOOK="<path to discord webhook>"
-OAUTH2_SERVICE_URL="<path to the service, include query parameters if needed to get the correct token>"
-OAUTH2_SERVICE_KEY="<your secure bearer token to authenticate on the service>"
-CHANNEL_BOT_NAME="<bot used in channel, optional>"
+OPTIONS:
+        --access-token <access-token>
+            OAuth2 Access token [env: ACCESS_TOKEN]
+
+        --channel-bot-name <channel-bot-name>
+            Name of channel bot [env: CHANNEL_BOT_NAME]
+
+        --channel-id <channel-id>
+            User ID of channel to monitor. If left out, defaults to owner of access token [env:
+            CHANNEL_ID]
+
+        --channel-login <channel-login>
+            Name of channel to monitor. If left out, defaults to owner of access token [env:
+            CHANNEL_LOGIN]
+
+        --discord-webhook <discord-webhook>
+            URL to discord webhook [env: DISCORD_WEBHOOK]
+
+        --oauth2-service-key <oauth2-service-key>
+            Bearer key for authorizing on the OAuth2 service url [env: OAUTH2_SERVICE_KEY]
+
+        --oauth2-service-refresh <oauth2-service-refresh>
+            Grab a new token from the OAuth2 service this many seconds before it actually expires.
+            Default is 30 seconds [env: OAUTH2_SERVICE_REFRESH]
+
+        --oauth2-service-url <oauth2-service-url>
+            URL to service that provides OAuth2 token. Called on start and whenever the token needs
+            to be refreshed.
+
+            This application does not do any refreshing of tokens. [env: OAUTH2_SERVICE_URL]
 ```
 
 

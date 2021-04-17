@@ -5,7 +5,7 @@ use anyhow::Context;
 use clap::{ArgGroup, ArgSettings, Clap};
 
 #[derive(Clap)]
-#[clap(author, about, version,
+#[clap(about, version, long_version = concat!(env!("VERGEN_BUILD_SEMVER"),"-", env!("GIT_SHA"),"", "\nrustc: ", env!("VERGEN_RUSTC_SEMVER"), " ", env!("VERGEN_RUSTC_COMMIT_HASH"), "\nbuild timestamp: ", env!("VERGEN_BUILD_TIMESTAMP")),
     group = ArgGroup::new("token").multiple(false).required(false), 
     group = ArgGroup::new("service").multiple(true).requires("oauth2-service-url"), 
     group = ArgGroup::new("channel").multiple(true).required(false), 
@@ -57,6 +57,7 @@ pub fn is_token(s: &str) -> anyhow::Result<()> {
 async fn main() {
     let _ = dotenv::dotenv().with_context(|| "couldn't load .env file"); //ignore error
     let _ = util::build_logger();
+
     let opts = Opts::parse();
     tracing::info!("App started!");
 
