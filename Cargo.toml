@@ -17,7 +17,6 @@ tracing = "0.1.22"
 tracing-subscriber = "0.2.15"
 tracing-futures = "0.2.4"
 tracing-log = "0.1.1"
-tracing-appender = "0.1.2"
 anyhow = "1.0.38"
 chrono = "0.4.19"
 ansi_term = "0.12.1"
@@ -25,7 +24,7 @@ dotenv = "0.15.0"
 twitch_api2 = { version = "0.5.0-alpha.5", features = ["reqwest_client", "helix", "pubsub", "deny_unknown_fields"] }
 twitch_oauth2 = { version = "0.5.0-alpha.5", features = ["reqwest_client"] }
 async-tungstenite = { version = "0.13.1", features = ["tokio-native-tls"] }
-reqwest = "0.11.0"
+reqwest = {version = "0.11.0", features = ["json"]}
 url = "2.2.0"
 futures = "0.3.10"
 discord_webhook = { git = "https://github.com/thoo0224/webhook-rs", rev = "dc217e1fe", package = "webhook" }
@@ -41,7 +40,7 @@ anyhow = "1.0.38"
 git-version = "0.3.4"
 
 [target.'cfg(not(any(windows, unix, macos)))'.dependencies]
-reqwest = { version = "0.11.0", features = ["rustls-tls"] }
+reqwest = { version = "0.11.0", features = ["rustls-tls", "json"] }
 
 
 [patch.crates-io]

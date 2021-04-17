@@ -35,8 +35,11 @@ pub struct Opts {
     /// Bearer key for authorizing on the OAuth2 service url.
     #[clap(long, env, setting = ArgSettings::HideEnvValues, group = "service")]
     pub oauth2_service_key: Option<String>,
+    /// Grab token by pointer. See https://tools.ietf.org/html/rfc6901
+    #[clap(long, env, setting = ArgSettings::HideEnvValues, group = "service", default_value_if("oauth2-service-url", None, Some("/access_token")))]
+    pub oauth2_service_pointer: Option<String>,
     /// Grab a new token from the OAuth2 service this many seconds before it actually expires. Default is 30 seconds
-    #[clap(long, env, setting = ArgSettings::HideEnvValues, group = "service")]
+    #[clap(long, env, setting = ArgSettings::HideEnvValues, group = "service", default_value_if("oauth2-service-url", None, Some("30")))]
     pub oauth2_service_refresh: Option<u64>,
     /// Name of channel bot.
     #[clap(long, env, setting = ArgSettings::HideEnvValues)]
@@ -59,7 +62,6 @@ async fn main() {
     let _ = util::build_logger();
 
     let opts = Opts::parse();
-
     tracing::info!(
         "App started!\n{}",
         Opts::try_parse_from(&["app", "--version"])
@@ -84,7 +86,7 @@ pub async fn run(opts: &Opts) -> anyhow::Result<()> {
         .context("when constructing subscriber")?;
     let recv = subscriber.pubsub_channel.subscribe();
     let webhook = webhook::Webhook::new(subscriber.channel_login.to_string(), &opts);
-    tracing::info!("listening for new pubsub messages");
+    tracing::debug!("entering main block");
     tokio::select!(
     r = subscriber.run(&opts) => {
         tracing::warn!(message = "subscriber exited early", result = ?r);

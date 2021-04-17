@@ -25,21 +25,13 @@ pub async fn make_token(token: String) -> Result<UserToken, anyhow::Error> {
     .map_err(Into::into)
 }
 
-#[derive(Debug, serde::Deserialize)]
-struct OauthServiceResponse {
-    #[serde(alias = "token")]
-    access_token: String,
-    #[serde(flatten)]
-    other: std::collections::HashMap<String, serde_json::Value>,
-}
-
 pub async fn get_access_token(
     client: &reqwest::Client,
     opts: &crate::Opts,
 ) -> Result<UserToken, anyhow::Error> {
     if let Some(ref access_token) = opts.access_token {
         make_token(access_token.clone()).await
-    } else if let Some(ref oauth_service_url) = opts.oauth2_service_url {
+    } else if let (Some(ref oauth_service_url), Some(ref pointer)) = (&opts.oauth2_service_url, &opts.oauth2_service_pointer) {
         tracing::info!(
             "using oauth service on `{}` to get oauth token",
             oauth_service_url
@@ -57,11 +49,11 @@ pub async fn get_access_token(
                 if !(response.status().is_client_error()
                     || response.status().is_server_error()) =>
             {
-                let service_response: OauthServiceResponse = response
+                let service_response: serde_json::Value = response
                     .json()
                     .await
                     .context("when transforming oauth service response to json")?;
-                make_token(service_response.access_token).await
+                make_token(service_response.pointer(&pointer).with_context(|| format!("could not get a field on `{}`", pointer))?.as_str().context("token is not a string")?.to_string()).await
             }
             Ok(response_error) => {
                 let status = response_error.status();
@@ -78,7 +70,7 @@ pub async fn get_access_token(
             }
         }
     } else {
-        anyhow::bail!("no token specified for use, see the documentation")
+        panic!("got empty vals for token cli group")
     }
 }
 
@@ -86,7 +78,7 @@ impl Subscriber {
     #[tracing::instrument(skip(opts))]
     pub async fn new(opts: &crate::Opts) -> Result<Self, anyhow::Error> {
         let client = reqwest::Client::default();
-        let access_token = get_access_token(&client, opts).await?;
+        let access_token = get_access_token(&client, opts).await.context("when getting access token")?;
         let token_id = access_token
             .validate_token(twitch_oauth2::client::reqwest_http_client)
             .await?
@@ -126,7 +118,7 @@ impl Subscriber {
                     .to_string(),
             )
         };
-        tracing::info!("sucessfully retrieved token and user info");
+        tracing::info!("successfully retrieved token and user info");
         Ok(Subscriber {
             access_token,
             channel_id,
@@ -142,10 +134,9 @@ impl Subscriber {
         self.token_id = %self.token_id,
     ))]
     pub async fn run(mut self, opts: &crate::Opts) -> Result<(), anyhow::Error> {
-        // Send ping every 5 minutes...
         let mut s = self
             .connect_and_send(twitch_api2::TWITCH_PUBSUB_URL)
-            .await?;
+            .await.context("when establishing connection")?;
 
         let ping_timer = tokio::time::sleep(
             std::time::Duration::new(4 * 60, 0)
@@ -166,7 +157,7 @@ impl Subscriber {
                     _ = &mut token_timer => {
                         if opts.oauth2_service_url.is_some() {
                             tracing::info!("token is expired or will expire soon, trying to refresh");
-                            self.access_token = get_access_token(&reqwest::Client::default(), &opts).await?;
+                            self.access_token = get_access_token(&reqwest::Client::default(), &opts).await.context("when getting access token")?;
                             token_timer.as_mut().reset(tokio::time::Instant::now() + self.access_token.expires_in() - std::time::Duration::from_secs(opts.oauth2_service_refresh.unwrap_or(30)));
                         } else {
                             tracing::warn!("token is expired or will expire soon");
@@ -174,7 +165,7 @@ impl Subscriber {
                     },
                     _ = &mut ping_timer => {
                         tracing::trace!("sending ping");
-                        s.send(Message::text(r#"{"type": "PING"}"#)).await?;
+                        s.send(Message::text(r#"{"type": "PING"}"#)).await.context("when sending ping")?;
                         ping_timer.as_mut().reset(tokio::time::Instant::now() + std::time::Duration::new(4 * 60, 0)
                         + std::time::Duration::from_millis(fastrand::u64(0..4000)));
                     },
@@ -184,7 +175,7 @@ impl Subscriber {
                             let msg = match msg {
                                 Err(async_tungstenite::tungstenite::Error::Protocol(async_tungstenite::tungstenite::error::ProtocolError::ResetWithoutClosingHandshake)) => {
                                     tracing::warn!("connection was sent an unexpected frame or was reset, reestablishing it");
-                                    s = self.connect_and_send(twitch_api2::TWITCH_PUBSUB_URL).await?;
+                                    s = self.connect_and_send(twitch_api2::TWITCH_PUBSUB_URL).await.context("when reestablishing connection")?;
 
                                     return Ok(())
                                 },
@@ -193,17 +184,16 @@ impl Subscriber {
                             tracing::debug!("got message");
                             match msg {
                                 Message::Text(msg) => {
-                                    let response = twitch_api2::pubsub::Response::parse(&msg)?;
+                                    let response = twitch_api2::pubsub::Response::parse(&msg).context("when parsing pubsub response text")?;
                                     if let twitch_api2::pubsub::Response::Reconnect = response {
                                         s = self.connect_and_send(twitch_api2::TWITCH_PUBSUB_URL).await?;
                                     }
                                     tracing::debug!(message = ?response);
-                                    if let twitch_api2::pubsub::Response::Response(ref r) = response {
+                                    if let twitch_api2::pubsub::Response::Response(ref _r) = response {
                                         // TODO handle bad auth
                                     }
                                     self.pubsub_channel
-                                        .send(response)
-                                        .map_err(|e| anyhow::anyhow!("{:?}", e))?;
+                                        .send(response)?;
                                 }
                                 Message::Close(_) => {return Err(anyhow::anyhow!("twitch requested us to close the shop..."))}
                                 Message::Ping(..) | Message::Pong(..) => {}
@@ -218,16 +208,17 @@ impl Subscriber {
         }
     }
 
+    #[tracing::instrument(skip(self))]
     pub async fn connect(
         &self,
         url: &str,
     ) -> Result<async_tungstenite::WebSocketStream<tokio_at::ConnectStream>, anyhow::Error> {
-        tracing::debug!("connecting to {}", url);
+        tracing::info!("connecting to twitch");
         let config = async_tungstenite::tungstenite::protocol::WebSocketConfig {
             max_send_queue: None,
             max_message_size: Some(64 << 20), // 64 MiB
             max_frame_size: Some(16 << 20),   // 16 MiB
-            accept_unmasked_frames: true,
+            accept_unmasked_frames: false,
         };
         let (socket, _) = tokio_at::connect_async_with_config(url::Url::parse(url)?, Some(config))
             .await
@@ -241,16 +232,17 @@ impl Subscriber {
         &self,
         url: &str,
     ) -> Result<async_tungstenite::WebSocketStream<tokio_at::ConnectStream>, anyhow::Error> {
-        let mut s = self.connect(url).await?;
+        let mut s = self.connect(url).await.context("when connecting to twitch")?;
         let topic = twitch_api2::pubsub::moderation::ChatModeratorActions {
-            channel_id: self.channel_id.parse()?,
-            user_id: self.token_id.parse()?,
+            channel_id: self.channel_id.parse().context("could not parse the channel user id as an integer")?,
+            user_id: self.token_id.parse().context("could not parse the user id of the token as an integer")?,
         };
         // if scopes doesn't contain required scope, then bail
         if !<twitch_api2::pubsub::moderation::ChatModeratorActions as twitch_api2::pubsub::Topic>::SCOPE.iter().all(|s| self.access_token.scopes().contains(&s)) {
             tracing::info!("token has scopes: {:?}", self.access_token.scopes());
             anyhow::bail!("access token does not have valid scopes, required scope(s): {:?}", <twitch_api2::pubsub::moderation::ChatModeratorActions as twitch_api2::pubsub::Topic>::SCOPE.iter().map(|s| s.to_string()).collect::<Vec<_>>());
         }
+        tracing::info!("sending pubsub subscription topics to listen to");
         s.send(Message::text(
             twitch_api2::pubsub::TopicSubscribe::Listen {
                 nonce: Some("moderator".to_string()),

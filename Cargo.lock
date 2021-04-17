@@ -1733,17 +1733,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tracing-appender"
-version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9965507e507f12c8901432a33e31131222abac31edd90cabbcf85cf544b7127a"
-dependencies = [
- "chrono",
- "crossbeam-channel",
- "tracing-subscriber",
-]
-
-[[package]]
 name = "tracing-attributes"
 version = "0.1.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1862,7 +1851,6 @@ dependencies = [
  "serde_json",
  "tokio",
  "tracing",
- "tracing-appender",
  "tracing-futures",
  "tracing-log",
  "tracing-subscriber",

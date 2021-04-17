@@ -31,7 +31,10 @@ impl Webhook {
             match msg {
                 twitch_api2::pubsub::Response::Response(r) => {
                     if !r.is_successful() {
-                        anyhow::bail!("pubsub returned an error {}", r.error.unwrap());
+                        anyhow::bail!(
+                            "pubsub returned an error {}",
+                            r.error.as_deref().unwrap_or("")
+                        );
                     }
                 }
                 twitch_api2::pubsub::Response::Message { data } => match data {
@@ -43,7 +46,7 @@ impl Webhook {
                     }
                 },
                 twitch_api2::pubsub::Response::Pong => {
-                    tracing::debug!("PONG from twitch :)")
+                    tracing::debug!("PONG from twitch")
                 }
                 twitch_api2::pubsub::Response::Reconnect => {
                     tracing::error!("Twitch needs to reconnect")
@@ -71,22 +74,27 @@ impl Webhook {
             ) => {
                 let bot_name = self.channel_bot_name.clone().map(|s| s.to_lowercase());
                 let mut created_by_bot = false;
-                let real_created_by = match created_by.clone() {
-                    bot if bot_name.map_or(false, |s| s == bot) => match args
-                        .iter()
-                        .last()
-                        .map_or("", |s| s.as_str())
-                        .split(' ')
-                        .collect::<Vec<_>>()
-                        .as_slice()
+                let real_created_by = match (created_by.clone(), bot_name) {
+                    (created_by, Some(bot_specified_name))
+                        if created_by == bot_specified_name.to_lowercase() =>
                     {
-                        [.., "by", user] => {
-                            created_by_bot = moderation_action != ModerationActionCommand::Delete;
-                            user.to_string()
+                        match args
+                            .iter()
+                            .last()
+                            .map_or("", |s| s.as_str())
+                            .split(' ')
+                            .collect::<Vec<_>>()
+                            .as_slice()
+                        {
+                            [.., "by", user] => {
+                                created_by_bot =
+                                    moderation_action != ModerationActionCommand::Delete;
+                                user.to_string()
+                            }
+                            _ => bot_specified_name,
                         }
-                        _ => self.channel_bot_name.clone().unwrap(), // Checked above
-                    },
-                    other => other,
+                    }
+                    (other, _) => other,
                 };
 
                 self.webhook.send(|message| {
