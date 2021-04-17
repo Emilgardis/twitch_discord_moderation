@@ -12,35 +12,35 @@ repository = "https://github.com/Emilgardis/twitch_discord_moderation"
 build = "build.rs"
 
 [dependencies]
-tokio = { version = "1.0.1", features = ["full"] }
-tracing = "0.1.22"
-tracing-subscriber = "0.2.15"
-tracing-futures = "0.2.4"
-tracing-log = "0.1.1"
-anyhow = "1.0.38"
+tokio = { version = "1.5.0", features = ["full"] }
+tracing = "0.1.25"
+tracing-subscriber = "0.2.17"
+tracing-futures = "0.2.5"
+tracing-log = "0.1.2"
+anyhow = "1.0.40"
 chrono = "0.4.19"
 ansi_term = "0.12.1"
 dotenv = "0.15.0"
 twitch_api2 = { version = "0.5.0-alpha.5", features = ["reqwest_client", "helix", "pubsub", "deny_unknown_fields"] }
 twitch_oauth2 = { version = "0.5.0-alpha.5", features = ["reqwest_client"] }
 async-tungstenite = { version = "0.13.1", features = ["tokio-native-tls"] }
-reqwest = {version = "0.11.0", features = ["json"]}
-url = "2.2.0"
-futures = "0.3.10"
+reqwest = { version = "0.11.3", features = ["json"] }
+url = "2.2.1"
+futures = "0.3.14"
 discord_webhook = { git = "https://github.com/thoo0224/webhook-rs", rev = "dc217e1fe", package = "webhook" }
 humantime = "2.1.0"
-serde = "1"
-serde_json = "1"
-fastrand = "1"
+serde = "1.0.125"
+serde_json = "1.0.64"
+fastrand = "1.4.0"
 clap = {git = "https://github.com/clap-rs/clap", rev = "d253c34" }
 
 [build-dependencies]
 vergen = "5.1.1"
-anyhow = "1.0.38"
+anyhow = "1.0.40"
 git-version = "0.3.4"
 
 [target.'cfg(not(any(windows, unix, macos)))'.dependencies]
-reqwest = { version = "0.11.0", features = ["rustls-tls", "json"] }
+reqwest = { version = "0.11.3", features = ["rustls-tls", "json"] }
 
 
 [patch.crates-io]
