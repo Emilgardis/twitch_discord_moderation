@@ -4,7 +4,7 @@ pub mod webhook;
 use anyhow::Context;
 use clap::{ArgGroup, ArgSettings, Clap};
 
-#[derive(Clap)]
+#[derive(Clap, Debug)]
 #[clap(about, version, long_version = concat!(env!("VERGEN_BUILD_SEMVER"),"-", env!("GIT_SHA"),"", "\nrustc: ", env!("VERGEN_RUSTC_SEMVER"), " ", env!("VERGEN_RUSTC_COMMIT_HASH"), "\nbuild timestamp: ", env!("VERGEN_BUILD_TIMESTAMP")),
     group = ArgGroup::new("token").multiple(false).required(false), 
     group = ArgGroup::new("service").multiple(true).requires("oauth2-service-url"), 
@@ -59,7 +59,13 @@ async fn main() {
     let _ = util::build_logger();
 
     let opts = Opts::parse();
-    tracing::info!("App started!");
+
+    tracing::info!(
+        "App started!\n{}",
+        Opts::try_parse_from(&["app", "--version"])
+            .unwrap_err()
+            .to_string()
+    );
 
     match run(&opts).await {
         Ok(_) => {}
