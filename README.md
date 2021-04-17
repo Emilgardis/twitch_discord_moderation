@@ -14,9 +14,10 @@ cd twitch_discord_moderation
 git update-index --assume-unchanged .env
 # edit .env file or set ENV vars accordingly
 $ cat .env # do this with your favorite editor, or set env vars
-DISCORD_WEBHOOK="<path to discord webhook>"
-ACCESS_TOKEN="<broadcaster oauth token, need to have channel:moderate>"
-CHANNEL_BOT_NAME="<bot used in channel, optional>"
+DISCORD_WEBHOOK=<path to discord webhook>
+ACCESS_TOKEN=<oauth token, need to have channel:moderate>
+CHANNEL_LOGIN=<login name of channel to watch, use the channel owners token for more pubsub messages>
+CHANNEL_BOT_NAME=<bot used in channel, optional>
 # compile and run
 $ cargo run --release
 ```

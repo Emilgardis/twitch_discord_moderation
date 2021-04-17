@@ -126,6 +126,7 @@ impl Subscriber {
                     .to_string(),
             )
         };
+        tracing::info!("sucessfully retrieved token and user info");
         Ok(Subscriber {
             access_token,
             channel_id,
@@ -162,10 +163,14 @@ impl Subscriber {
         tokio::pin!(token_timer);
         loop {
             tokio::select!(
-                    _ = &mut token_timer, if opts.oauth2_service_url.is_some()  => {
-                        tracing::info!("token is or will expire soon, trying to refresh");
-                        self.access_token = get_access_token(&reqwest::Client::default(), &opts).await?;
-                        token_timer.as_mut().reset(tokio::time::Instant::now() + self.access_token.expires_in() - std::time::Duration::from_secs(opts.oauth2_service_refresh.unwrap_or(30)));
+                    _ = &mut token_timer => {
+                        if opts.oauth2_service_url.is_some() {
+                            tracing::info!("token is expired or will expire soon, trying to refresh");
+                            self.access_token = get_access_token(&reqwest::Client::default(), &opts).await?;
+                            token_timer.as_mut().reset(tokio::time::Instant::now() + self.access_token.expires_in() - std::time::Duration::from_secs(opts.oauth2_service_refresh.unwrap_or(30)));
+                        } else {
+                            tracing::warn!("token is expired or will expire soon");
+                        }
                     },
                     _ = &mut ping_timer => {
                         tracing::trace!("sending ping");
@@ -193,6 +198,9 @@ impl Subscriber {
                                         s = self.connect_and_send(twitch_api2::TWITCH_PUBSUB_URL).await?;
                                     }
                                     tracing::debug!(message = ?response);
+                                    if let twitch_api2::pubsub::Response::Response(ref r) = response {
+                                        // TODO handle bad auth
+                                    }
                                     self.pubsub_channel
                                         .send(response)
                                         .map_err(|e| anyhow::anyhow!("{:?}", e))?;

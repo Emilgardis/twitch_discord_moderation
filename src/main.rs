@@ -84,6 +84,7 @@ pub async fn run(opts: &Opts) -> anyhow::Result<()> {
         .context("when constructing subscriber")?;
     let recv = subscriber.pubsub_channel.subscribe();
     let webhook = webhook::Webhook::new(subscriber.channel_login.to_string(), &opts);
+    tracing::info!("listening for new pubsub messages");
     tokio::select!(
     r = subscriber.run(&opts) => {
         tracing::warn!(message = "subscriber exited early", result = ?r);
