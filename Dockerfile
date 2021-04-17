@@ -1,5 +1,6 @@
 # syntax = docker/dockerfile:experimental
-FROM rust:latest as planner
+FROM --platform=$BUILDPLATFORM rust:latest as planner
+ARG CARGO_NET_GIT_FETCH_WITH_CLI=1
 WORKDIR /app
 RUN --mount=type=cache,target=$CARGO_HOME/registry --mount=type=cache,target=$CARGO_HOME/bin cargo install cargo-chef
 COPY . .
