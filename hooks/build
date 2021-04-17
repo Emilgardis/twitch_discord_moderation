@@ -1,0 +1,5 @@
+export DOCKER_CLI_EXPERIMENTAL=enabled
+export DOCKER_BUILDKIT=1
+echo "Using BUILD_INFO=${BUILD_INFO}"
+docker buildx bake \
+	--progress plain --load

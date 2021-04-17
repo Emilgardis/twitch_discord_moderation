@@ -20,12 +20,12 @@ CHANNEL_LOGIN=<login name of channel to watch, use the channel owners token for 
 CHANNEL_BOT_NAME=<bot used in channel, optional>
 # compile and run
 $ cargo run --release
-```
 # or use docker compose
 $ docker-compose up
 ```
 
-This application also supports getting an oauth2 token from an external service on url `OAUTH2_SERVICE_URL`. This service should return a token in a json body where the token string is in the field `access_token` or `token`, if not, specify the path with `OAUTH2_SERVICE_JQ`.
+This application also supports getting an oauth2 token from an external service on url `OAUTH2_SERVICE_URL`. This service should return a token in a json body where the token string is in the field `access_token` or `token`, if not, specify the path with `OAUTH2_SERVICE_POINTER`.
+
 
 ```
 OPTIONS:

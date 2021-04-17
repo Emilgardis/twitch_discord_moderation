@@ -1,5 +1,9 @@
-variable "TAG" {
+variable "DOCKER_TAG" {
     default = "latest"
+}
+
+variable "DOCKER_REPO" {
+    default = "twitch-discord-moderation"
 }
 
 group "default" {
@@ -7,6 +11,6 @@ group "default" {
 }
 
 target "app" {
-    tags = ["docker.io/emilgardis/twitch-discord-moderation:${TAG}"]
+    tags = ["docker.io/emilgardis/${DOCKER_REPO}:${DOCKER_TAG}"]
     platforms = ["linux/amd64", "linux/arm64", "linux/arm/v7"]
 }
