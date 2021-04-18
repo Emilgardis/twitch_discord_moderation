@@ -31,7 +31,9 @@ pub async fn get_access_token(
 ) -> Result<UserToken, anyhow::Error> {
     if let Some(ref access_token) = opts.access_token {
         make_token(access_token.clone()).await
-    } else if let (Some(ref oauth_service_url), Some(ref pointer)) = (&opts.oauth2_service_url, &opts.oauth2_service_pointer) {
+    } else if let (Some(ref oauth_service_url), Some(ref pointer)) =
+        (&opts.oauth2_service_url, &opts.oauth2_service_pointer)
+    {
         tracing::info!(
             "using oauth service on `{}` to get oauth token",
             oauth_service_url
@@ -53,7 +55,15 @@ pub async fn get_access_token(
                     .json()
                     .await
                     .context("when transforming oauth service response to json")?;
-                make_token(service_response.pointer(&pointer).with_context(|| format!("could not get a field on `{}`", pointer))?.as_str().context("token is not a string")?.to_string()).await
+                make_token(
+                    service_response
+                        .pointer(&pointer)
+                        .with_context(|| format!("could not get a field on `{}`", pointer))?
+                        .as_str()
+                        .context("token is not a string")?
+                        .to_string(),
+                )
+                .await
             }
             Ok(response_error) => {
                 let status = response_error.status();
@@ -78,7 +88,9 @@ impl Subscriber {
     #[tracing::instrument(skip(opts))]
     pub async fn new(opts: &crate::Opts) -> Result<Self, anyhow::Error> {
         let client = reqwest::Client::default();
-        let access_token = get_access_token(&client, opts).await.context("when getting access token")?;
+        let access_token = get_access_token(&client, opts)
+            .await
+            .context("when getting access token")?;
         let token_id = access_token
             .validate_token(twitch_oauth2::client::reqwest_http_client)
             .await?
@@ -136,7 +148,8 @@ impl Subscriber {
     pub async fn run(mut self, opts: &crate::Opts) -> Result<(), anyhow::Error> {
         let mut s = self
             .connect_and_send(twitch_api2::TWITCH_PUBSUB_URL)
-            .await.context("when establishing connection")?;
+            .await
+            .context("when establishing connection")?;
 
         let ping_timer = tokio::time::sleep(
             std::time::Duration::new(4 * 60, 0)
@@ -232,10 +245,19 @@ impl Subscriber {
         &self,
         url: &str,
     ) -> Result<async_tungstenite::WebSocketStream<tokio_at::ConnectStream>, anyhow::Error> {
-        let mut s = self.connect(url).await.context("when connecting to twitch")?;
+        let mut s = self
+            .connect(url)
+            .await
+            .context("when connecting to twitch")?;
         let topic = twitch_api2::pubsub::moderation::ChatModeratorActions {
-            channel_id: self.channel_id.parse().context("could not parse the channel user id as an integer")?,
-            user_id: self.token_id.parse().context("could not parse the user id of the token as an integer")?,
+            channel_id: self
+                .channel_id
+                .parse()
+                .context("could not parse the channel user id as an integer")?,
+            user_id: self
+                .token_id
+                .parse()
+                .context("could not parse the user id of the token as an integer")?,
         };
         // if scopes doesn't contain required scope, then bail
         if !<twitch_api2::pubsub::moderation::ChatModeratorActions as twitch_api2::pubsub::Topic>::SCOPE.iter().all(|s| self.access_token.scopes().contains(&s)) {

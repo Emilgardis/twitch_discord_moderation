@@ -1,30 +1,32 @@
 Twitch Discord Moderation | Sync mod actions with discord
 ============================================
 
-You'll need to install rust to run this bot. Or use docker
+Sync moderator actions with a discord channel.
 
-Install with [rustup.rs](https://rustup.rs/)
+Example usage with docker-compose
 
-```bash
-# clone the repository
-$ git clone https://github.com/Emilgardis/twitch_discord_moderation.git
-# cd into it
-cd twitch_discord_moderation
-# set .env file to untracked
-git update-index --assume-unchanged .env
-# edit .env file or set ENV vars accordingly
-$ cat .env # do this with your favorite editor, or set env vars
-DISCORD_WEBHOOK=<path to discord webhook>
-ACCESS_TOKEN=<oauth token, need to have channel:moderate>
-CHANNEL_LOGIN=<login name of channel to watch, use the channel owners token for more pubsub messages>
-CHANNEL_BOT_NAME=<bot used in channel, optional>
-# compile and run
-$ cargo run --release
-# or use docker compose
-$ docker-compose up
+```yml
+version: "3"
+
+services:
+  twitch-discord-moderation:
+    image: emilgardis/twitch-discord-moderation:latest
+    env_file: .env
+    environment: 
+      RUST_LOG: "info"
+    restart: "unless-stopped"
 ```
 
-This application also supports getting an oauth2 token from an external service on url `OAUTH2_SERVICE_URL`. This service should return a token in a json body where the token string is in the field `access_token` or `token`, if not, specify the path with `OAUTH2_SERVICE_POINTER`.
+and the `.env`
+
+```txt
+ACCESS_TOKEN=0123456789abcdefghijABCDEFGHIJ
+CHANNEL_LOGIN=justintv
+DISCORD_WEBHOOK=https://discordapp.com/api/webhooks/111111111111/aaaaaaaaaaaaaaa
+RUST_LOG=info
+```
+
+This application also supports getting an oauth2 token from an external service on url. This service should return a token in a json body where the token string is in the field `access_token`, if not, specify the path with a pointer.
 
 
 ```
@@ -48,6 +50,10 @@ OPTIONS:
 
         --oauth2-service-key <oauth2-service-key>
             Bearer key for authorizing on the OAuth2 service url [env: OAUTH2_SERVICE_KEY]
+
+        --oauth2-service-pointer <oauth2-service-pointer>
+            Grab token by pointer. See https://tools.ietf.org/html/rfc6901 [env:
+            OAUTH2_SERVICE_POINTER]
 
         --oauth2-service-refresh <oauth2-service-refresh>
             Grab a new token from the OAuth2 service this many seconds before it actually expires.
