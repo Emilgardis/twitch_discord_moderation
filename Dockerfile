@@ -1,26 +1,18 @@
 # syntax = docker/dockerfile:experimental
-FROM --platform=$BUILDPLATFORM rust:latest as planner
-WORKDIR /app
-RUN --mount=type=cache,target=$CARGO_HOME cargo install cargo-chef
-COPY . .
-RUN ls -la
-RUN cargo chef prepare  --recipe-path recipe.json
-
-FROM rust:latest as cacher
-WORKDIR /app
-RUN --mount=type=cache,target=$CARGO_HOME cargo install cargo-chef
-COPY --from=planner /app/recipe.json recipe.json
-RUN --mount=type=cache,target=$CARGO_HOME/registry cargo chef cook --release --recipe-path recipe.json -p twitch-discord-moderation
-
 # TODO specify cross compilation instead
-FROM rust:latest as builder
+FROM rust:1.51-slim as builder
 WORKDIR /app
+RUN \
+    apt-get update && \
+	apt-get install -yqq --no-install-recommends \
+    libssl-dev libgit2-dev git pkg-config && rm -rf /var/lib/apt/lists/*
 COPY . .
-# Copy over the cached dependencies
-COPY --from=cacher /app/target target
-COPY --from=cacher $CARGO_HOME $CARGO_HOME
-RUN --mount=type=cache,target=$CARGO_HOME/registry cargo build --release --bin twitch-discord-moderation
-FROM rust:latest as runtime
+RUN --mount=type=cache,target=$CARGO_HOME/registry --mount=type=cache,target=/app/target cargo build --release --bin twitch-discord-moderation; mv /app/target/release/twitch-discord-moderation /app/twitch-discord-moderation
+FROM debian:buster-slim as runtime
 WORKDIR /app
-COPY --from=builder /app/target/release/twitch-discord-moderation /app/twitch-discord-moderation
+RUN \
+    apt-get update && \
+	apt-get install -yqq --no-install-recommends \
+    openssl ca-certificates && rm -rf /var/lib/apt/lists/*
+COPY --from=builder /app/twitch-discord-moderation /app/twitch-discord-moderation
 ENTRYPOINT "/app/twitch-discord-moderation"
