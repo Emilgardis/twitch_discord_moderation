@@ -6,4 +6,4 @@ services:
     env_file: .env
     environment: 
       RUST_LOG: "info"
-    restart: "no"
+    restart: "unless-stopped"

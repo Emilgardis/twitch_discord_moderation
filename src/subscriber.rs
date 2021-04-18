@@ -5,6 +5,7 @@ use tokio::sync;
 use tracing_futures::Instrument;
 use twitch_oauth2::{TwitchToken, UserToken};
 
+pub const MOD_NONCE: &str = "moderator";
 pub struct Subscriber {
     pub(crate) access_token: twitch_oauth2::UserToken,
     pub channel_id: twitch_api2::types::UserId,
@@ -267,7 +268,7 @@ impl Subscriber {
         tracing::info!("sending pubsub subscription topics to listen to");
         s.send(Message::text(
             twitch_api2::pubsub::TopicSubscribe::Listen {
-                nonce: Some("moderator".to_string()),
+                nonce: Some(MOD_NONCE.to_string()),
                 topics: vec![topic.into()],
                 auth_token: self.access_token.token().clone().secret().clone(),
             }

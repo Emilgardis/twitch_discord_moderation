@@ -36,6 +36,14 @@ impl Webhook {
                             r.error.as_deref().unwrap_or("")
                         );
                     }
+                    match r.nonce.as_deref() {
+                        Some(crate::subscriber::MOD_NONCE) => {
+                            tracing::info!("listening to moderator actions")
+                        }
+                        _ => {
+                            tracing::warn!(message = ?r, "twitch responded with an unexpected message")
+                        }
+                    }
                 }
                 twitch_api2::pubsub::Response::Message { data } => match data {
                     twitch_api2::pubsub::TopicData::ChatModeratorActions { reply, .. } => {
