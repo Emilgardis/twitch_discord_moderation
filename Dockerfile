@@ -12,7 +12,7 @@ FROM rust:1.51-alpine3.13 as cacher
 WORKDIR /app
 ARG BUILD_DEPS
 RUN apk add --no-cache ${BUILD_DEPS}
-COPY --from=planner $CARGO_HOME/bin/cargo-chef $CARGO_HOME/bin/cargo-chef 
+RUN --mount=type=cache,target=$CARGO_HOME/bin cargo install cargo-chef --version 0.1.19
 COPY --from=planner /app/recipe.json recipe.json
 ARG RUSTFLAGS=-Ctarget-feature=-crt-static
 RUN --mount=type=cache,target=$CARGO_HOME/registry cargo chef cook --recipe-path recipe.json -p twitch-discord-moderation
