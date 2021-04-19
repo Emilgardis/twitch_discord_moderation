@@ -1,6 +1,6 @@
 [package]
 name = "twitch-discord-moderation"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Emil Gardström <emil.gardstrom@gmail.com>"]
 edition = "2018"
 license = "MIT OR APACHE-2.0"
@@ -37,10 +37,8 @@ clap = {git = "https://github.com/clap-rs/clap", rev = "d253c34" }
 [build-dependencies]
 anyhow = "1.0.40"
 
-
-[target.'cfg(not(any(windows, unix, macos)))'.dependencies]
-reqwest = { version = "0.11.3", features = ["rustls-tls", "json"] }
-
+[target.'cfg(all(not(any(target_os = "windows", target_os = "macos", target_os = "ios")), target_env = "musl"))'.dependencies]
+#openssl = { version = "0.10.33", features = ["vendored"] }
 
 [patch.crates-io]
 #twitch_api2 = { path = "../twitch_api2" }
