@@ -14,10 +14,12 @@ target "app" {
     tags = ["emilgardis/${DOCKER_REPO}:${DOCKER_TAG}"]
     platforms = ["linux/amd64"]
 }
+
 target "app-release" {
     inherits = ["app"]
     platforms = ["linux/amd64", "linux/arm64"]
 }
+
 target "app-v7" {
     inherits = ["app"]
     // armv7 is broken, see https://github.com/docker/buildx/issues/395
