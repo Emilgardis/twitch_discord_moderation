@@ -19,7 +19,7 @@ jobs:
         uses: docker/bake-action@v1.3.0
         with:
           push: true
-          targets: app-release # app-release takes ages to compile right now 
+          targets: release
           files: docker-bake.hcl
       - name: Docker Hub Description
         uses: peter-evans/dockerhub-description@v2.4.2
