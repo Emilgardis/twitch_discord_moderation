@@ -1,9 +1,9 @@
 # syntax = docker/dockerfile:experimental
-FROM --platform=$BUILDPLATFORM rust:1.51-alpine3.13 as planner
+FROM rust:1.51-alpine3.13 as planner
 WORKDIR /app
 RUN apk add --no-cache \
         musl-dev
-RUN --mount=type=cache,target=$CARGO_HOME/bin cargo install cargo-chef --version 0.1.19
+RUN cargo install cargo-chef --version 0.1.19
 COPY . .
 RUN ls -la
 RUN cargo chef prepare  --recipe-path recipe.json
@@ -12,7 +12,7 @@ FROM rust:1.51-alpine3.13 as cacher
 WORKDIR /app
 ARG BUILD_DEPS
 RUN apk add --no-cache ${BUILD_DEPS}
-RUN --mount=type=cache,target=$CARGO_HOME/bin cargo install cargo-chef --version 0.1.19
+COPY --from=planner $CARGO_HOME/bin $CARGO_HOME/bin
 COPY --from=planner /app/recipe.json recipe.json
 ARG RUSTFLAGS=-Ctarget-feature=-crt-static
 RUN --mount=type=cache,target=$CARGO_HOME/registry cargo chef cook --recipe-path recipe.json -p twitch-discord-moderation
