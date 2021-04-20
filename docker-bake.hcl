@@ -18,7 +18,8 @@ target "app" {
     tags = ["emilgardis/${DOCKER_REPO}:${DOCKER_TAG}"]
     platforms = ["linux/amd64"]
     args = {
-        BUILD_DEPS="musl-dev pkgconfig perl build-base openssl openssl-dev"
+        BUILD_DEPS="musl-dev pkgconfig perl build-base openssl openssl-dev git"
+        RUN_DEPS="ca-certificates openssl libgcc"
     }
 }
 
@@ -26,7 +27,8 @@ target "app-aarch64" {
     inherits = ["app"]
     platforms = ["linux/arm64"]
     args = {
-        BUILD_DEPS="musl-dev pkgconfig perl build-base openssl openssl-dev"
+        BUILD_DEPS="musl-dev pkgconfig perl build-base openssl openssl-dev git"
+        RUN_DEPS="ca-certificates openssl libgcc"
     }
 }
 

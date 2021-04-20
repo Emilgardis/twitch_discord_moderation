@@ -36,6 +36,8 @@ clap = {git = "https://github.com/clap-rs/clap", rev = "d253c34" }
 
 [build-dependencies]
 anyhow = "1.0.40"
+vergen = "5.1.2"
+git-version = "0.3.4"
 
 [target.'cfg(all(not(any(target_os = "windows", target_os = "macos", target_os = "ios")), target_env = "musl"))'.dependencies]
 #openssl = { version = "0.10.33", features = ["vendored"] }
