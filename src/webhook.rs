@@ -47,6 +47,7 @@ impl Webhook {
                 }
                 twitch_api2::pubsub::Response::Message { data } => match data {
                     twitch_api2::pubsub::TopicData::ChatModeratorActions { reply, .. } => {
+                        tracing::info!(moderation_action = ?reply, "got mod action");
                         self.post_moderator_action(*reply).await?;
                     }
                     message => {

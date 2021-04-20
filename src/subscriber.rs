@@ -157,6 +157,7 @@ impl Subscriber {
                 + std::time::Duration::from_millis(fastrand::u64(0..4000)),
         );
         tokio::pin!(ping_timer);
+        tracing::info!("pinging every {} seconds with some jitter", 4 * 60);
         let token_timer = tokio::time::sleep(
             self.access_token
                 .expires_in()

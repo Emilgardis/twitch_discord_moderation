@@ -27,10 +27,11 @@ jobs:
           push: true
           targets: release
           files: docker-bake.hcl
-      - name: Docker Hub Description
-        uses: peter-evans/dockerhub-description@v2.4.2
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-          short-description: ${{ github.event.repository.description }}
-          repository: emilgardis/twitch-discord-moderation
+      # disabled due to needing a password
+      # - name: Docker Hub Description
+      #   uses: peter-evans/dockerhub-description@v2.4.2
+      #   with:
+      #     username: ${{ secrets.DOCKERHUB_USERNAME }}
+      #     password: ${{ secrets.DOCKERHUB_PASSWORD }}
+      #     short-description: ${{ github.event.repository.description }}
+      #     repository: emilgardis/twitch-discord-moderation
