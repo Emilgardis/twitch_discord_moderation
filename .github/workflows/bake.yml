@@ -31,7 +31,6 @@ jobs:
         uses: docker/bake-action@v1.3.0
         with:
           push: true
-          targets: release
           files: docker-bake.hcl
       # disabled due to needing a password
       # - name: Docker Hub Description
