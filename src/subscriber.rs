@@ -247,6 +247,7 @@ impl Subscriber {
         &self,
         url: &str,
     ) -> Result<async_tungstenite::WebSocketStream<tokio_at::ConnectStream>, anyhow::Error> {
+        use twitch_api2::pubsub::Topic as _;
         let mut s = self
             .connect(url)
             .await
@@ -260,21 +261,19 @@ impl Subscriber {
                 .token_id
                 .parse()
                 .context("could not parse the user id of the token as an integer")?,
-        };
+        }
+        .into_topic();
         // if scopes doesn't contain required scope, then bail
         if !<twitch_api2::pubsub::moderation::ChatModeratorActions as twitch_api2::pubsub::Topic>::SCOPE.iter().all(|s| self.access_token.scopes().contains(&s)) {
             tracing::info!("token has scopes: {:?}", self.access_token.scopes());
             anyhow::bail!("access token does not have valid scopes, required scope(s): {:?}", <twitch_api2::pubsub::moderation::ChatModeratorActions as twitch_api2::pubsub::Topic>::SCOPE.iter().map(|s| s.to_string()).collect::<Vec<_>>());
         }
         tracing::info!("sending pubsub subscription topics to listen to");
-        s.send(Message::text(
-            twitch_api2::pubsub::TopicSubscribe::Listen {
-                nonce: Some(MOD_NONCE.to_string()),
-                topics: vec![topic.into()],
-                auth_token: self.access_token.token().clone().secret().clone(),
-            }
-            .to_command()?,
-        ))
+        s.send(Message::text(twitch_api2::pubsub::listen_command(
+            &[topic],
+            self.access_token.token().clone().secret().as_str(),
+            Some(MOD_NONCE),
+        )?))
         .await?;
 
         // let topic = twitch_api2::pubsub::ChannelPointsChannelV1 { channel_id: id };

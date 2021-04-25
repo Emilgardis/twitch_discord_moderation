@@ -300,9 +300,9 @@ dependencies = [
 
 [[package]]
 name = "fastrand"
-version = "1.4.0"
+version = "1.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ca5faf057445ce5c9d4329e382b2ce7ca38550ef3b73a5348362d5f24e0c7fe3"
+checksum = "77b705829d1e87f762c2df6da140b26af5839e1033aa84aa5f56bb688e4e1bdb"
 dependencies = [
  "instant",
 ]
@@ -582,9 +582,9 @@ checksum = "4a1ce40d6fc9764887c2fdc7305c3dcc429ba11ff981c1509416afd5697e4437"
 
 [[package]]
 name = "httpdate"
-version = "0.3.2"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "494b4d60369511e7dea41cf646832512a94e542f68bb9c49e54518e0f468eb47"
+checksum = "05842d0d43232b23ccb7060ecb0f0626922c21f30012e97b767b30afd4a5d4b9"
 
 [[package]]
 name = "humantime"
@@ -594,9 +594,9 @@ checksum = "9a3a5bfb195931eeb336b2a7b4d761daec841b97f947d34394601737a7bba5e4"
 
 [[package]]
 name = "hyper"
-version = "0.14.5"
+version = "0.14.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8bf09f61b52cfcf4c00de50df88ae423d6c02354e385a86341133b5338630ad1"
+checksum = "1e5f105c494081baa3bf9e200b279e27ec1623895cd504c7dbef8d0b080fcf54"
 dependencies = [
  "bytes",
  "futures-channel",
@@ -1191,9 +1191,9 @@ dependencies = [
 
 [[package]]
 name = "regex"
-version = "1.4.5"
+version = "1.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "957056ecddbeba1b26965114e191d2e8589ce74db242b6ea25fc4062427a5c19"
+checksum = "2a26af418b574bd56588335b3a3659a65725d4e636eb1016c2f9e3b38c7cc759"
 dependencies = [
  "regex-syntax",
 ]
@@ -1445,9 +1445,9 @@ dependencies = [
 
 [[package]]
 name = "slab"
-version = "0.4.2"
+version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c111b5bd5695e56cffe5129854aa230b39c93a305372fdbb2668ca2394eea9f8"
+checksum = "f173ac3d1a7e3b28003f40de0b5ce7fe2710f9b9dc3fc38664cebee46b3b6527"
 
 [[package]]
 name = "smallvec"
@@ -1473,9 +1473,9 @@ checksum = "73473c0e59e6d5812c5dfe2a064a6444949f089e20eec9a2e5506596494e4623"
 
 [[package]]
 name = "syn"
-version = "1.0.69"
+version = "1.0.70"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "48fe99c6bd8b1cc636890bcc071842de909d902c81ac7dab53ba33c421ab8ffb"
+checksum = "b9505f307c872bab8eb46f77ae357c8eba1fdacead58ee5a850116b1d7f82883"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1484,9 +1484,9 @@ dependencies = [
 
 [[package]]
 name = "sysinfo"
-version = "0.17.1"
+version = "0.17.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a42d53b0c95692ea084fe9fecbb5d428098b16addcd3da956b97841a28df8947"
+checksum = "7f5e4b56d92c7c56cc8a06df0cc06860a8ec6102e9a8a5ee85dff90afbeadf3d"
 dependencies = [
  "cfg-if",
  "core-foundation-sys",
@@ -1789,8 +1789,9 @@ dependencies = [
 
 [[package]]
 name = "twitch_api2"
-version = "0.5.0-alpha.5"
-source = "git+https://github.com/Emilgardis/twitch_api2.git?rev=3c9886f#3c9886f9d38ee28746747fe118bf5ffa73ca9634"
+version = "0.5.0-alpha.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3e19a52eebedbfc9e6d927472b3b50658af072f305c73bc1212439bbfd443ee3"
 dependencies = [
  "async-trait",
  "displaydoc",
@@ -1799,6 +1800,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "serde_json",
+ "serde_path_to_error",
  "serde_repr",
  "thiserror",
  "twitch_oauth2",
@@ -1809,8 +1811,9 @@ dependencies = [
 
 [[package]]
 name = "twitch_oauth2"
-version = "0.5.0-alpha.5"
-source = "git+https://github.com/Emilgardis/twitch_api2.git?rev=3c9886f#3c9886f9d38ee28746747fe118bf5ffa73ca9634"
+version = "0.5.0-alpha.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "189956b511e1e878ebbdf62c2517c5e690b32736662d4c2a2f212874e801d258"
 dependencies = [
  "async-trait",
  "displaydoc",
@@ -1914,9 +1917,9 @@ checksum = "f1bddf1187be692e79c5ffeab891132dfb0f236ed36a43c7ed39f1165ee20191"
 
 [[package]]
 name = "vergen"
-version = "5.1.2"
+version = "5.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0277ffac28b64e449a7a8c369ddd8591647c5a2d1fd513eebd6a153ff4c40ea4"
+checksum = "575b693376dacf6a9825ab3e61a033cf0e94040e620fca8447b055ef8ce82d2b"
 dependencies = [
  "anyhow",
  "cfg-if",

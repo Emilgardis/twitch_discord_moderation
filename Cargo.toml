@@ -21,8 +21,8 @@ anyhow = "1.0.40"
 chrono = "0.4.19"
 ansi_term = "0.12.1"
 dotenv = "0.15.0"
-twitch_api2 = { version = "0.5.0-alpha.5", features = ["reqwest_client", "helix", "pubsub"] }
-twitch_oauth2 = { version = "0.5.0-alpha.5", features = ["reqwest_client"] }
+twitch_api2 = { version = "0.5.0-alpha.6", features = ["reqwest_client", "helix", "pubsub"] }
+twitch_oauth2 = { version = "0.5.0-alpha.6", features = ["reqwest_client"] }
 async-tungstenite = { version = "0.13.1", features = ["tokio-native-tls"] }
 reqwest = { version = "0.11.3", features = ["json"] }
 url = "2.2.1"
@@ -31,12 +31,12 @@ discord_webhook = { git = "https://github.com/thoo0224/webhook-rs", rev = "dc217
 humantime = "2.1.0"
 serde = "1.0.125"
 serde_json = "1.0.64"
-fastrand = "1.4.0"
+fastrand = "1.4.1"
 clap = {git = "https://github.com/clap-rs/clap", rev = "d253c34" }
 
 [build-dependencies]
 anyhow = "1.0.40"
-vergen = "5.1.2"
+vergen = "5.1.4"
 git-version = "0.3.4"
 
 [target.'cfg(all(not(any(target_os = "windows", target_os = "macos", target_os = "ios")), target_env = "musl"))'.dependencies]
@@ -45,6 +45,6 @@ git-version = "0.3.4"
 [patch.crates-io]
 #twitch_api2 = { path = "../twitch_api2" }
 #twitch_oauth2 = { path = "../twitch_api2/twitch_oauth2" }
-twitch_api2 = { git = "https://github.com/Emilgardis/twitch_api2.git", rev = "3c9886f" }
-twitch_oauth2 = { git = "https://github.com/Emilgardis/twitch_api2.git", rev = "3c9886f" }
+#twitch_api2 = { git = "https://github.com/Emilgardis/twitch_api2.git", rev = "3c9886f" }
+#twitch_oauth2 = { git = "https://github.com/Emilgardis/twitch_api2.git", rev = "3c9886f" }
 #tungstenite = {path = "../tungstenite-rs"}
