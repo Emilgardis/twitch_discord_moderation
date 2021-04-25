@@ -2,6 +2,12 @@ name: docker
 on:
   push:
     branches: ['main']
+    paths:
+      - "**.rs"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "docker-bake.hcl"
+      - "Dockerfile"
 jobs:
   bake:
     runs-on: ubuntu-latest
