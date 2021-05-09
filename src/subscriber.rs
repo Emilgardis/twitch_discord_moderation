@@ -171,9 +171,9 @@ impl Subscriber {
             tokio::select!(
                     _ = &mut token_timer => {
                         if opts.oauth2_service_url.is_some() {
-                            tracing::info!("token is expired or will expire soon, trying to refresh");
-                            self.access_token = get_access_token(&reqwest::Client::default(), &opts).await.context("when getting access token")?;
-                            token_timer.as_mut().reset(tokio::time::Instant::now() + self.access_token.expires_in() - std::time::Duration::from_secs(opts.oauth2_service_refresh.unwrap_or(30)));
+                            tracing::info!("token is expired or will expire soon");
+                            //self.access_token = get_access_token(&reqwest::Client::default(), &opts).await.context("when getting access token")?;
+                            //token_timer.as_mut().reset(tokio::time::Instant::now() + self.access_token.expires_in() - std::time::Duration::from_secs(opts.oauth2_service_refresh.unwrap_or(30)));
                         } else {
                             tracing::warn!("token is expired or will expire soon");
                         }

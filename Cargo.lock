@@ -1789,9 +1789,9 @@ dependencies = [
 
 [[package]]
 name = "twitch_api2"
-version = "0.5.0-beta.2"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3a8bfc6b2966035ddd56a653cccaaa83c976fb9a31b603427efab9b86c66574e"
+checksum = "bdc2501e86ce46c8d345ad575ee5c7862a6882dce201efcf4cdbff05f714a492"
 dependencies = [
  "async-trait",
  "displaydoc",
@@ -1811,9 +1811,9 @@ dependencies = [
 
 [[package]]
 name = "twitch_oauth2"
-version = "0.5.0-beta.1"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a3db5e72a0e7c56d0a397d9dc98c2fc912b959ca8776768cf3c51557b13e23bf"
+checksum = "5010c25892e2971c3e1be7416df6f8bad04d7c9257599de686c469e8c7f096de"
 dependencies = [
  "async-trait",
  "displaydoc",
@@ -1886,9 +1886,9 @@ checksum = "8ccb82d61f80a663efe1f787a51b16b5a51e3314d6ac365b08639f52387b33f3"
 
 [[package]]
 name = "url"
-version = "2.2.1"
+version = "2.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9ccd964113622c8e9322cfac19eb1004a07e636c545f325da085d5cdde6f1f8b"
+checksum = "a507c383b2d33b5fc35d1861e77e6b383d158b2da5e14fe51b83dfedf6fd578c"
 dependencies = [
  "form_urlencoded",
  "idna",

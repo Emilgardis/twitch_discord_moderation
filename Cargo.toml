@@ -21,8 +21,8 @@ anyhow = "1.0.40"
 chrono = "0.4.19"
 ansi_term = "0.12.1"
 dotenv = "0.15.0"
-twitch_api2 = { version = "0.5.0-beta.2", features = ["reqwest_client", "helix", "pubsub"] }
-twitch_oauth2 = { version = "0.5.0-beta.1", features = ["reqwest_client"] }
+twitch_api2 = { version = "0.5.0", features = ["reqwest_client", "helix", "pubsub"] }
+twitch_oauth2 = { version = "0.5.0", features = ["reqwest_client"] }
 async-tungstenite = { version = "0.13.1", features = ["tokio-native-tls"] }
 reqwest = { version = "0.11.3", features = ["json"] }
 url = "2.2.1"
