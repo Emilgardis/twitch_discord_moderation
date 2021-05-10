@@ -169,15 +169,16 @@ impl Subscriber {
         tokio::pin!(token_timer);
         loop {
             tokio::select!(
-                    _ = &mut token_timer => {
-                        if opts.oauth2_service_url.is_some() {
-                            tracing::info!("token is expired or will expire soon");
-                            //self.access_token = get_access_token(&reqwest::Client::default(), &opts).await.context("when getting access token")?;
-                            //token_timer.as_mut().reset(tokio::time::Instant::now() + self.access_token.expires_in() - std::time::Duration::from_secs(opts.oauth2_service_refresh.unwrap_or(30)));
-                        } else {
-                            tracing::warn!("token is expired or will expire soon");
-                        }
-                    },
+                    // FIXME: put this in a separate thread
+                    // _ = &mut token_timer => {
+                    //     if opts.oauth2_service_url.is_some() {
+                    //         tracing::info!("token is expired or will expire soon");
+                    //         //self.access_token = get_access_token(&reqwest::Client::default(), &opts).await.context("when getting access token")?;
+                    //         //token_timer.as_mut().reset(tokio::time::Instant::now() + self.access_token.expires_in() - std::time::Duration::from_secs(opts.oauth2_service_refresh.unwrap_or(30)));
+                    //     } else {
+                    //         tracing::warn!("token is expired or will expire soon");
+                    //     }
+                    // },
                     _ = &mut ping_timer => {
                         tracing::trace!("sending ping");
                         s.send(Message::text(r#"{"type": "PING"}"#)).await.context("when sending ping")?;
