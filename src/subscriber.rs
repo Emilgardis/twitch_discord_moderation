@@ -76,7 +76,7 @@ pub async fn get_access_token(
                 );
             }
             Err(e) => {
-                return Err(e)
+                Err(e)
                     .with_context(|| format!("calling oauth service on `{}`", &oauth_service_url))
             }
         }
@@ -148,7 +148,7 @@ impl Subscriber {
     ))]
     pub async fn run(mut self, opts: &crate::Opts) -> Result<(), anyhow::Error> {
         let mut s = self
-            .connect_and_send(twitch_api2::TWITCH_PUBSUB_URL)
+            .connect_and_send(twitch_api2::TWITCH_PUBSUB_URL, &opts)
             .await
             .context("when establishing connection")?;
 
@@ -158,27 +158,8 @@ impl Subscriber {
         );
         tokio::pin!(ping_timer);
         tracing::info!("pinging every {} seconds with some jitter", 4 * 60);
-        let token_timer = tokio::time::sleep(
-            self.access_token
-                .expires_in()
-                .checked_sub(std::time::Duration::from_secs(
-                    opts.oauth2_service_refresh.unwrap_or(30),
-                ))
-                .unwrap_or_default(),
-        );
-        tokio::pin!(token_timer);
         loop {
             tokio::select!(
-                    // FIXME: put this in a separate thread
-                    // _ = &mut token_timer => {
-                    //     if opts.oauth2_service_url.is_some() {
-                    //         tracing::info!("token is expired or will expire soon");
-                    //         //self.access_token = get_access_token(&reqwest::Client::default(), &opts).await.context("when getting access token")?;
-                    //         //token_timer.as_mut().reset(tokio::time::Instant::now() + self.access_token.expires_in() - std::time::Duration::from_secs(opts.oauth2_service_refresh.unwrap_or(30)));
-                    //     } else {
-                    //         tracing::warn!("token is expired or will expire soon");
-                    //     }
-                    // },
                     _ = &mut ping_timer => {
                         tracing::trace!("sending ping");
                         s.send(Message::text(r#"{"type": "PING"}"#)).await.context("when sending ping")?;
@@ -191,7 +172,7 @@ impl Subscriber {
                             let msg = match msg {
                                 Err(async_tungstenite::tungstenite::Error::Protocol(async_tungstenite::tungstenite::error::ProtocolError::ResetWithoutClosingHandshake)) => {
                                     tracing::warn!("connection was sent an unexpected frame or was reset, reestablishing it");
-                                    s = self.connect_and_send(twitch_api2::TWITCH_PUBSUB_URL).await.context("when reestablishing connection")?;
+                                    s = self.connect_and_send(twitch_api2::TWITCH_PUBSUB_URL, &opts).await.context("when reestablishing connection")?;
 
                                     return Ok(())
                                 },
@@ -202,7 +183,7 @@ impl Subscriber {
                                 Message::Text(msg) => {
                                     let response = twitch_api2::pubsub::Response::parse(&msg).context("when parsing pubsub response text")?;
                                     if let twitch_api2::pubsub::Response::Reconnect = response {
-                                        s = self.connect_and_send(twitch_api2::TWITCH_PUBSUB_URL).await?;
+                                        s = self.connect_and_send(twitch_api2::TWITCH_PUBSUB_URL, &opts).await?;
                                     }
                                     tracing::debug!(message = ?response);
                                     if let twitch_api2::pubsub::Response::Response(ref _r) = response {
@@ -245,14 +226,25 @@ impl Subscriber {
 
     #[tracing::instrument(skip(self))]
     pub async fn connect_and_send(
-        &self,
+        &mut self,
         url: &str,
+        opts: &crate::Opts,
     ) -> Result<async_tungstenite::WebSocketStream<tokio_at::ConnectStream>, anyhow::Error> {
         use twitch_api2::pubsub::Topic as _;
         let mut s = self
             .connect(url)
             .await
             .context("when connecting to twitch")?;
+        if self.access_token.is_elapsed() {
+            if opts.oauth2_service_url.is_some() {
+                tracing::info!("token is expired");
+                self.access_token = get_access_token(&reqwest::Client::default(), &opts)
+                    .await
+                    .context("when getting access token")?;
+            } else {
+                tracing::warn!("token is expired");
+            }
+        }
         let topic = twitch_api2::pubsub::moderation::ChatModeratorActions {
             channel_id: self
                 .channel_id
