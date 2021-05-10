@@ -18,7 +18,7 @@ pub struct Opts {
     #[clap(long, env, setting = ArgSettings::HideEnvValues, group = "token",
         validator = is_token, required_unless_present = "service"
     )]
-    pub access_token: Option<String>,
+    pub access_token: Option<Secret>,
     /// Name of channel to monitor. If left out, defaults to owner of access token.
     #[clap(long, env, setting = ArgSettings::HideEnvValues, group = "channel")]
     pub channel_login: Option<String>,
@@ -34,7 +34,7 @@ pub struct Opts {
     pub oauth2_service_url: Option<String>,
     /// Bearer key for authorizing on the OAuth2 service url.
     #[clap(long, env, setting = ArgSettings::HideEnvValues, group = "service")]
-    pub oauth2_service_key: Option<String>,
+    pub oauth2_service_key: Option<Secret>,
     /// Grab token by pointer. See https://tools.ietf.org/html/rfc6901
     #[clap(long, env, setting = ArgSettings::HideEnvValues, group = "service", default_value_if("oauth2-service-url", None, Some("/access_token")))]
     pub oauth2_service_pointer: Option<String>,
@@ -54,6 +54,23 @@ pub fn is_token(s: &str) -> anyhow::Result<()> {
         anyhow::bail!("token needs to be 30 characters long")
     }
     Ok(())
+}
+
+#[derive(Clone)]
+pub struct Secret(String);
+
+impl Secret {
+    fn secret(&self) -> &str { &self.0 }
+}
+
+impl std::str::FromStr for Secret {
+    type Err = std::convert::Infallible;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> { Ok(Self(s.to_string())) }
+}
+
+impl std::fmt::Debug for Secret {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { write!(f, "[secret]") }
 }
 
 #[tokio::main]

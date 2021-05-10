@@ -31,7 +31,7 @@ pub async fn get_access_token(
     opts: &crate::Opts,
 ) -> Result<UserToken, anyhow::Error> {
     if let Some(ref access_token) = opts.access_token {
-        make_token(access_token.clone()).await
+        make_token(access_token.secret().to_string()).await
     } else if let (Some(ref oauth_service_url), Some(ref pointer)) =
         (&opts.oauth2_service_url, &opts.oauth2_service_pointer)
     {
@@ -42,7 +42,7 @@ pub async fn get_access_token(
 
         let mut request = client.get(oauth_service_url);
         if let Some(ref key) = opts.oauth2_service_key {
-            request = request.bearer_auth(key);
+            request = request.bearer_auth(key.secret());
         }
         let request = request.build()?;
         tracing::debug!("request: {:?}", request);
@@ -76,8 +76,7 @@ pub async fn get_access_token(
                 );
             }
             Err(e) => {
-                Err(e)
-                    .with_context(|| format!("calling oauth service on `{}`", &oauth_service_url))
+                Err(e).with_context(|| format!("calling oauth service on `{}`", &oauth_service_url))
             }
         }
     } else {
@@ -236,13 +235,12 @@ impl Subscriber {
             .await
             .context("when connecting to twitch")?;
         if self.access_token.is_elapsed() {
+            tracing::info!("token is expired");
             if opts.oauth2_service_url.is_some() {
-                tracing::info!("token is expired");
                 self.access_token = get_access_token(&reqwest::Client::default(), &opts)
                     .await
                     .context("when getting access token")?;
             } else {
-                tracing::warn!("token is expired");
             }
         }
         let topic = twitch_api2::pubsub::moderation::ChatModeratorActions {
