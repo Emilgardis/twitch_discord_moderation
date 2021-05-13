@@ -1790,8 +1790,7 @@ dependencies = [
 [[package]]
 name = "twitch_api2"
 version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bdc2501e86ce46c8d345ad575ee5c7862a6882dce201efcf4cdbff05f714a492"
+source = "git+https://github.com/Emilgardis/twitch_api2.git?rev=f62ee85#f62ee85f46556cd1c0dab8f28de8cfa11843838e"
 dependencies = [
  "async-trait",
  "displaydoc",
@@ -1812,8 +1811,7 @@ dependencies = [
 [[package]]
 name = "twitch_oauth2"
 version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5010c25892e2971c3e1be7416df6f8bad04d7c9257599de686c469e8c7f096de"
+source = "git+https://github.com/Emilgardis/twitch_api2.git?rev=f62ee85#f62ee85f46556cd1c0dab8f28de8cfa11843838e"
 dependencies = [
  "async-trait",
  "displaydoc",

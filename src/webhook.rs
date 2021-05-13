@@ -142,10 +142,6 @@ impl Webhook {
                         ),
                         | moderation::ModerationActionCommand::ModifiedAutomodProperties
                         | moderation::ModerationActionCommand::AutomodRejected
-                        | moderation::ModerationActionCommand::DeleteBlockedTerm
-                        | moderation::ModerationActionCommand::AddPermittedTerm
-                        | moderation::ModerationActionCommand::DeletePermittedTerm
-                        | moderation::ModerationActionCommand::AddBlockedTerm
                         | moderation::ModerationActionCommand::ApproveAutomodMessage
                         | moderation::ModerationActionCommand::DeniedAutomodMessage => format!("👀_Twitch Moderation_ |\n*{0}*: /{1} ||{2}||", created_by, moderation_action, args.join(" ")),
                         _ => format!("👀_Twitch Moderation_ |\n*{0}*: /{1} {2}", real_created_by, moderation_action, args.join(" ")),
