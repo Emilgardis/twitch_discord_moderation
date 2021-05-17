@@ -176,16 +176,16 @@ impl Webhook {
                     .await
                     .map_err(|e| anyhow::anyhow!("{}", e.to_string()))?;
             }
-            moderation::ChatModeratorActionsReply::VipAdded(_) => {
-                // self.webhook
-                //     .send(|message| {
-                //         message.content(&format!(
-                //             "👀_Twitch Moderation_ |\n*{0}*: /{1} {2}",
-                //             vip_added.created_by, "vip", vip_added.target_user_login,
-                //         ))
-                //     })
-                //     .await
-                //     .map_err(|e| anyhow::anyhow!("{}", e.to_string()))?;
+            moderation::ChatModeratorActionsReply::VipAdded(vip_added) => {
+                self.webhook
+                    .send(|message| {
+                        message.content(&format!(
+                            "👀_Twitch Moderation_ |\n*{0}*: /{1} {2}",
+                            vip_added.created_by, "vip", vip_added.target_user_login,
+                        ))
+                    })
+                    .await
+                    .map_err(|e| anyhow::anyhow!("{}", e.to_string()))?;
             }
             moderation::ChatModeratorActionsReply::ChannelTermsAction(channel_term) => {
                 let msg = match channel_term.type_ {
