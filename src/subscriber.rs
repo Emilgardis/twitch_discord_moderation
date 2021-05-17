@@ -180,16 +180,23 @@ impl Subscriber {
                             tracing::debug!("got message");
                             match msg {
                                 Message::Text(msg) => {
-                                    let response = twitch_api2::pubsub::Response::parse(&msg).context("when parsing pubsub response text")?;
-                                    if let twitch_api2::pubsub::Response::Reconnect = response {
-                                        s = self.connect_and_send(twitch_api2::TWITCH_PUBSUB_URL, &opts).await?;
+                                    match twitch_api2::pubsub::Response::parse(&msg).context("when parsing pubsub response text") {
+                                        Ok(response) => {
+                                            if let twitch_api2::pubsub::Response::Reconnect = response {
+                                                s = self.connect_and_send(twitch_api2::TWITCH_PUBSUB_URL, &opts).await?;
+                                            }
+                                            tracing::debug!(message = ?response);
+                                            if let twitch_api2::pubsub::Response::Response(ref _r) = response {
+                                                // TODO handle bad auth
+                                            }
+                                            self.pubsub_channel
+                                                .send(response)?;
+                                        }
+                                        Err(e) => {
+                                            tracing::warn!(error=%e, "Got unhandled pubsub message.");
+                                        }
                                     }
-                                    tracing::debug!(message = ?response);
-                                    if let twitch_api2::pubsub::Response::Response(ref _r) = response {
-                                        // TODO handle bad auth
-                                    }
-                                    self.pubsub_channel
-                                        .send(response)?;
+                                    
                                 }
                                 Message::Close(_) => {return Err(anyhow::anyhow!("twitch requested us to close the shop..."))}
                                 Message::Ping(..) | Message::Pong(..) => {}
