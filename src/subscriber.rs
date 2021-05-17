@@ -196,7 +196,7 @@ impl Subscriber {
                                             tracing::warn!(error=%e, "Got unhandled pubsub message.");
                                         }
                                     }
-                                    
+
                                 }
                                 Message::Close(_) => {return Err(anyhow::anyhow!("twitch requested us to close the shop..."))}
                                 Message::Ping(..) | Message::Pong(..) => {}
