@@ -3,11 +3,11 @@ use async_tungstenite::{tokio as tokio_at, tungstenite::Message};
 use futures::prelude::*;
 use tokio::sync;
 use tracing_futures::Instrument;
-use twitch_oauth2::{TwitchToken, UserToken};
+use twitch_api2::twitch_oauth2::{TwitchToken, UserToken};
 
 pub const MOD_NONCE: &str = "moderator";
 pub struct Subscriber {
-    pub(crate) access_token: twitch_oauth2::UserToken,
+    pub(crate) access_token: twitch_api2::twitch_oauth2::UserToken,
     pub channel_id: twitch_api2::types::UserId,
     pub channel_login: twitch_api2::types::UserName,
     pub token_id: twitch_api2::types::UserId,
@@ -16,8 +16,8 @@ pub struct Subscriber {
 
 pub async fn make_token(token: String) -> Result<UserToken, anyhow::Error> {
     UserToken::from_existing(
-        twitch_oauth2::client::reqwest_http_client,
-        twitch_oauth2::AccessToken::new(token),
+        twitch_api2::twitch_oauth2::client::reqwest_http_client,
+        twitch_api2::twitch_oauth2::AccessToken::new(token),
         None,
         None,
     )
@@ -92,7 +92,7 @@ impl Subscriber {
             .await
             .context("when getting access token")?;
         let token_id = access_token
-            .validate_token(twitch_oauth2::client::reqwest_http_client)
+            .validate_token(twitch_api2::twitch_oauth2::client::reqwest_http_client)
             .await?
             .user_id
             .context("no user id found for oauth2 token, this is a bug")?;
