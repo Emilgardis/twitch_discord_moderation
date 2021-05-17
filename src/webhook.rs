@@ -213,7 +213,7 @@ impl Webhook {
                             channel_term.requester_login, channel_term.text
                         )
                     }
-                    _ => (return Ok(()))
+                    _ => (return Ok(())),
                 };
                 self.webhook
                     .send(|message| message.content(&msg))
@@ -231,7 +231,7 @@ impl Webhook {
                     .await
                     .map_err(|e| anyhow::anyhow!("{}", e.to_string()))?;
             }
-            _ => ()
+            _ => (),
         }
 
         Ok(())
