@@ -1,9 +1,9 @@
 use tokio::sync;
-use twitch_api2::pubsub::moderation;
+use twitch_api2::{pubsub::moderation, types};
 pub struct Webhook {
     webhook: discord_webhook::Webhook,
-    channel_login: String,
-    channel_bot_name: Option<String>,
+    channel_login: types::UserName,
+    channel_bot_name: Option<types::DisplayName>,
 }
 
 impl Webhook {
@@ -14,11 +14,11 @@ impl Webhook {
         )
     }
 
-    pub fn new(channel_login: String, opts: &crate::Opts) -> Webhook {
+    pub fn new(channel_login: types::UserName, opts: &crate::Opts) -> Webhook {
         Webhook {
             webhook: discord_webhook::Webhook::from_url(&opts.discord_webhook),
             channel_login,
-            channel_bot_name: opts.channel_bot_name.clone(),
+            channel_bot_name: opts.channel_bot_name.clone().map(types::DisplayName::new),
         }
     }
 
@@ -81,11 +81,14 @@ impl Webhook {
                     ..
                 },
             ) => {
-                let bot_name = self.channel_bot_name.clone().map(|s| s.to_lowercase());
+                let bot_name = self
+                    .channel_bot_name
+                    .clone()
+                    .map(|s| s.as_str().to_lowercase());
                 let mut created_by_bot = false;
                 let real_created_by = match (created_by.clone(), bot_name) {
                     (created_by, Some(bot_specified_name))
-                        if created_by == bot_specified_name.to_lowercase() =>
+                        if created_by.as_str() == bot_specified_name.to_lowercase() =>
                     {
                         match args
                             .iter()
@@ -103,21 +106,21 @@ impl Webhook {
                             _ => bot_specified_name,
                         }
                     }
-                    (other, _) => other,
+                    (other, _) => other.to_string(),
                 };
 
                 self.webhook.send(|message| {
                     message.content(&match &moderation_action {
                         ModerationActionCommand::Delete =>  { format!("❌_Twitch Moderation_ |\n*{0}*: /delete {1} ||{2}||\n*{1}:{3}* message deleted",
                             created_by, // Not real created by, since delete doesn't carry that information
-                            self.add_streamcardlink(args.get(0).map_or("<unknown>", |u| &u)),
+                            self.add_streamcardlink(args.get(0).map_or("<unknown>", |u| u)),
                             args[1..args.len().checked_sub(1).unwrap_or(1)].join(" "),
                             target_user_id,
                         )},
                         ModerationActionCommand::Timeout => format!("🔨_Twitch Moderation_ |\n*{0}*: /timeout {1}\n*{2}:{3}* has been timed out for {4}",
                             real_created_by,
                             args.join(" "),
-                            self.add_streamcardlink(args.get(0).map_or("<unknown>", |u| &u)),
+                            self.add_streamcardlink(args.get(0).map_or("<unknown>", |u| u)),
                             target_user_id,
                             args.get(1).map_or(String::from("<unknown>"), |u|
                                 humantime::format_duration(std::time::Duration::new(u.parse().unwrap_or(0),0)).to_string()
@@ -125,19 +128,19 @@ impl Webhook {
                         ),
                         ModerationActionCommand::Untimeout => format!("🔨_Twitch Moderation_ |\n*{0}*: /unban {1}\n*{1}:{2}* is no longer timed out",
                             real_created_by,
-                            self.add_streamcardlink(args.get(0).map_or("<unknown>", |u| &u)),
+                            self.add_streamcardlink(args.get(0).map_or("<unknown>", |u| u)),
                             target_user_id,
                         ),
                         ModerationActionCommand::Ban  => format!("🏝️_Twitch Moderation_ |\n*{0}*: /ban {1}\n*{2}:{3}* is now banned",
                             real_created_by,
                             args.join(" "),
-                            self.add_streamcardlink(args.get(0).map_or("<unknown>", |u| &u)),
+                            self.add_streamcardlink(args.get(0).map_or("<unknown>", |u| u)),
                             target_user_id,
                         ),
                         ModerationActionCommand::Unban => format!("🏝️_Twitch Moderation_ |\n*{0}*: /unban {1}\n*{2}:{3}* is no longer banned",
                             real_created_by,
                             args.join(" "),
-                            self.add_streamcardlink(args.get(0).map_or("<unknown>", |u| &u)),
+                            self.add_streamcardlink(args.get(0).map_or("<unknown>", |u| u)),
                             target_user_id,
                         ),
                         | moderation::ModerationActionCommand::ModifiedAutomodProperties
@@ -149,7 +152,7 @@ impl Webhook {
                     });
                     // .tts(false)
                     if created_by_bot {
-                        message.username(&format!("{}@twitch via {}", real_created_by, self.channel_bot_name.clone().unwrap_or_else(|| String::from("<bot>"))))
+                        message.username(&format!("{}@twitch via {}", real_created_by, self.channel_bot_name.clone().unwrap_or_else(|| types::DisplayName::from("<bot>"))))
                     } else {
                         message.username(&format!("{}@twitch", real_created_by))
                     }

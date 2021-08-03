@@ -137,9 +137,10 @@ where
 
         let span = self
             .span
-            .and_then(|id| self.ctx.span(&id))
+            .and_then(|id| self.ctx.span(id))
             .or_else(|| self.ctx.lookup_current());
 
+        #[allow(deprecated)]
         let scope = span
             .into_iter()
             .flat_map(|span| span.from_root().chain(core::iter::once(span)));

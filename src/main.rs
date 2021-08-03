@@ -102,10 +102,10 @@ pub async fn run(opts: &Opts) -> anyhow::Result<()> {
         .await
         .context("when constructing subscriber")?;
     let recv = subscriber.pubsub_channel.subscribe();
-    let webhook = webhook::Webhook::new(subscriber.channel_login.to_string(), &opts);
+    let webhook = webhook::Webhook::new(subscriber.channel_login.clone(), opts);
     tracing::debug!("entering main block");
     tokio::select!(
-    r = subscriber.run(&opts) => {
+    r = subscriber.run(opts) => {
         tracing::warn!(message = "subscriber exited early", result = ?r);
         if r.is_err() {
             r.with_context(|| "subscriber returned with error to panic on")?

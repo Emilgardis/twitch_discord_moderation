@@ -3,27 +3,25 @@ use async_tungstenite::{tokio as tokio_at, tungstenite::Message};
 use futures::prelude::*;
 use tokio::sync;
 use tracing_futures::Instrument;
-use twitch_api2::twitch_oauth2::{TwitchToken, UserToken};
+use twitch_api2::twitch_oauth2::{self, TwitchToken, UserToken};
 
 pub const MOD_NONCE: &str = "moderator";
 pub struct Subscriber {
-    pub(crate) access_token: twitch_api2::twitch_oauth2::UserToken,
+    pub(crate) access_token: twitch_oauth2::UserToken,
     pub channel_id: twitch_api2::types::UserId,
     pub channel_login: twitch_api2::types::UserName,
     pub token_id: twitch_api2::types::UserId,
     pub pubsub_channel: sync::broadcast::Sender<twitch_api2::pubsub::Response>,
 }
 
-pub async fn make_token(token: String) -> Result<UserToken, anyhow::Error> {
-    UserToken::from_existing(
-        twitch_api2::twitch_oauth2::client::reqwest_http_client,
-        twitch_api2::twitch_oauth2::AccessToken::new(token),
-        None,
-        None,
-    )
-    .await
-    .context("could not use access token")
-    .map_err(Into::into)
+pub async fn make_token<'a>(
+    client: &'a impl twitch_oauth2::client::Client<'a>,
+    token: impl Into<twitch_oauth2::AccessToken>,
+) -> Result<UserToken, anyhow::Error> {
+    UserToken::from_existing(client, token.into(), None, None)
+        .await
+        .context("could not use access token")
+        .map_err(Into::into)
 }
 
 pub async fn get_access_token(
@@ -31,7 +29,7 @@ pub async fn get_access_token(
     opts: &crate::Opts,
 ) -> Result<UserToken, anyhow::Error> {
     if let Some(ref access_token) = opts.access_token {
-        make_token(access_token.secret().to_string()).await
+        make_token(client, access_token.secret().to_string()).await
     } else if let (Some(ref oauth_service_url), Some(ref pointer)) =
         (&opts.oauth2_service_url, &opts.oauth2_service_pointer)
     {
@@ -57,8 +55,9 @@ pub async fn get_access_token(
                     .await
                     .context("when transforming oauth service response to json")?;
                 make_token(
+                    client,
                     service_response
-                        .pointer(&pointer)
+                        .pointer(pointer)
                         .with_context(|| format!("could not get a field on `{}`", pointer))?
                         .as_str()
                         .context("token is not a string")?
@@ -87,12 +86,13 @@ pub async fn get_access_token(
 impl Subscriber {
     #[tracing::instrument(skip(opts))]
     pub async fn new(opts: &crate::Opts) -> Result<Self, anyhow::Error> {
-        let client = reqwest::Client::default();
+        use twitch_api2::client::ClientDefault;
+        let client = reqwest::Client::default_client();
         let access_token = get_access_token(&client, opts)
             .await
             .context("when getting access token")?;
-        let token_id = access_token
-            .validate_token(twitch_api2::twitch_oauth2::client::reqwest_http_client)
+        let token_user_id = access_token
+            .validate_token(&client)
             .await?
             .user_id
             .context("no user id found for oauth2 token, this is a bug")?;
@@ -100,7 +100,7 @@ impl Subscriber {
         let (channel_id, channel_login) = if let Some(ref id) = opts.channel_id {
             // use access token to fetch broadcaster login
             (
-                id.clone(),
+                id.clone().into(),
                 twitch_api2::HelixClient::with_client(client.clone())
                     .get_user_from_id(id.clone(), &access_token)
                     .await
@@ -117,17 +117,17 @@ impl Subscriber {
                     .context("when calling twitch api")?
                     .with_context(|| format!("there is no user with login name {}", &login))?
                     .id,
-                login.clone(),
+                login.clone().into(),
             )
         } else {
             // FIXME: Use the same client?
             tracing::info!("Using the same user_id as token for channel id");
             (
-                token_id.clone(),
+                token_user_id.clone().into(),
                 access_token
                     .login()
                     .context("no user login attached to token")?
-                    .to_string(),
+                    .into(),
             )
         };
         tracing::info!("successfully retrieved token and user info");
@@ -135,7 +135,7 @@ impl Subscriber {
             access_token,
             channel_id,
             channel_login,
-            token_id,
+            token_id: token_user_id.into(),
             pubsub_channel: sync::broadcast::channel(16).0,
         })
     }
@@ -147,7 +147,7 @@ impl Subscriber {
     ))]
     pub async fn run(mut self, opts: &crate::Opts) -> Result<(), anyhow::Error> {
         let mut s = self
-            .connect_and_send(twitch_api2::TWITCH_PUBSUB_URL, &opts)
+            .connect_and_send(twitch_api2::TWITCH_PUBSUB_URL.as_str(), opts)
             .await
             .context("when establishing connection")?;
 
@@ -171,7 +171,7 @@ impl Subscriber {
                             let msg = match msg {
                                 Err(async_tungstenite::tungstenite::Error::Protocol(async_tungstenite::tungstenite::error::ProtocolError::ResetWithoutClosingHandshake)) => {
                                     tracing::warn!("connection was sent an unexpected frame or was reset, reestablishing it");
-                                    s = self.connect_and_send(twitch_api2::TWITCH_PUBSUB_URL, &opts).await.context("when reestablishing connection")?;
+                                    s = self.connect_and_send(twitch_api2::TWITCH_PUBSUB_URL.as_str(), opts).await.context("when reestablishing connection")?;
 
                                     return Ok(())
                                 },
@@ -183,7 +183,7 @@ impl Subscriber {
                                     match twitch_api2::pubsub::Response::parse(&msg).context("when parsing pubsub response text") {
                                         Ok(response) => {
                                             if let twitch_api2::pubsub::Response::Reconnect = response {
-                                                s = self.connect_and_send(twitch_api2::TWITCH_PUBSUB_URL, &opts).await?;
+                                                s = self.connect_and_send(twitch_api2::TWITCH_PUBSUB_URL.as_str(), opts).await?;
                                             }
                                             tracing::debug!(message = ?response);
                                             if let twitch_api2::pubsub::Response::Response(ref _r) = response {
@@ -244,7 +244,7 @@ impl Subscriber {
         if self.access_token.is_elapsed() {
             tracing::info!("token is expired");
             if opts.oauth2_service_url.is_some() {
-                self.access_token = get_access_token(&reqwest::Client::default(), &opts)
+                self.access_token = get_access_token(&reqwest::Client::default(), opts)
                     .await
                     .context("when getting access token")?;
             } else {
@@ -253,23 +253,25 @@ impl Subscriber {
         let topic = twitch_api2::pubsub::moderation::ChatModeratorActions {
             channel_id: self
                 .channel_id
+                .as_str()
                 .parse()
                 .context("could not parse the channel user id as an integer")?,
             user_id: self
                 .token_id
+                .as_str()
                 .parse()
                 .context("could not parse the user id of the token as an integer")?,
         }
         .into_topic();
         // if scopes doesn't contain required scope, then bail
-        if !<twitch_api2::pubsub::moderation::ChatModeratorActions as twitch_api2::pubsub::Topic>::SCOPE.iter().all(|s| self.access_token.scopes().contains(&s)) {
+        if !<twitch_api2::pubsub::moderation::ChatModeratorActions as twitch_api2::pubsub::Topic>::SCOPE.iter().all(|s| self.access_token.scopes().contains(s)) {
             tracing::info!("token has scopes: {:?}", self.access_token.scopes());
             anyhow::bail!("access token does not have valid scopes, required scope(s): {:?}", <twitch_api2::pubsub::moderation::ChatModeratorActions as twitch_api2::pubsub::Topic>::SCOPE.iter().map(|s| s.to_string()).collect::<Vec<_>>());
         }
         tracing::info!("sending pubsub subscription topics to listen to");
         s.send(Message::text(twitch_api2::pubsub::listen_command(
             &[topic],
-            self.access_token.token().clone().secret().as_str(),
+            self.access_token.token().clone().secret(),
             Some(MOD_NONCE),
         )?))
         .await?;
