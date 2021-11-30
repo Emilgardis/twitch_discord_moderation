@@ -1,3 +1,4 @@
+use crate::util::Sanitize;
 use tokio::sync;
 use twitch_api2::{pubsub::moderation, types};
 pub struct Webhook {
@@ -112,42 +113,42 @@ impl Webhook {
                 self.webhook.send(|message| {
                     message.content(&match &moderation_action {
                         ModerationActionCommand::Delete =>  { format!("❌_Twitch Moderation_ |\n*{0}*: /delete {1} ||{2}||\n*{1}:{3}* message deleted",
-                            created_by, // Not real created by, since delete doesn't carry that information
+                            created_by.sanitize(), // Not real created by, since delete doesn't carry that information
                             self.add_streamcardlink(args.get(0).map_or("<unknown>", |u| u)),
-                            args[1..args.len().checked_sub(1).unwrap_or(1)].join(" "),
-                            target_user_id,
+                            args[1..args.len().checked_sub(1).unwrap_or(1)].join(" ").sanitize(),
+                            target_user_id.sanitize(),
                         )},
                         ModerationActionCommand::Timeout => format!("🔨_Twitch Moderation_ |\n*{0}*: /timeout {1}\n*{2}:{3}* has been timed out for {4}",
-                            real_created_by,
-                            args.join(" "),
+                            real_created_by.sanitize(),
+                            args.join(" ").sanitize(),
                             self.add_streamcardlink(args.get(0).map_or("<unknown>", |u| u)),
-                            target_user_id,
+                            target_user_id.sanitize(),
                             args.get(1).map_or(String::from("<unknown>"), |u|
                                 humantime::format_duration(std::time::Duration::new(u.parse().unwrap_or(0),0)).to_string()
                             ),
                         ),
                         ModerationActionCommand::Untimeout => format!("🔨_Twitch Moderation_ |\n*{0}*: /unban {1}\n*{1}:{2}* is no longer timed out",
-                            real_created_by,
+                            real_created_by.sanitize(),
                             self.add_streamcardlink(args.get(0).map_or("<unknown>", |u| u)),
-                            target_user_id,
+                            target_user_id.sanitize(),
                         ),
                         ModerationActionCommand::Ban  => format!("🏝️_Twitch Moderation_ |\n*{0}*: /ban {1}\n*{2}:{3}* is now banned",
-                            real_created_by,
-                            args.join(" "),
+                            real_created_by.sanitize(),
+                            args.join(" ").sanitize(),
                             self.add_streamcardlink(args.get(0).map_or("<unknown>", |u| u)),
-                            target_user_id,
+                            target_user_id.sanitize(),
                         ),
                         ModerationActionCommand::Unban => format!("🏝️_Twitch Moderation_ |\n*{0}*: /unban {1}\n*{2}:{3}* is no longer banned",
-                            real_created_by,
-                            args.join(" "),
+                            real_created_by.sanitize(),
+                            args.join(" ").sanitize(),
                             self.add_streamcardlink(args.get(0).map_or("<unknown>", |u| u)),
-                            target_user_id,
+                            target_user_id.sanitize(),
                         ),
                         | moderation::ModerationActionCommand::ModifiedAutomodProperties
                         | moderation::ModerationActionCommand::AutomodRejected
                         | moderation::ModerationActionCommand::ApproveAutomodMessage
                         | moderation::ModerationActionCommand::DeniedAutomodMessage => format!("👀_Twitch Moderation_ |\n*{0}*: /{1} ||{2}||", created_by, moderation_action, args.join(" ")),
-                        _ => format!("👀_Twitch Moderation_ |\n*{0}*: /{1} {2}", real_created_by, moderation_action, args.join(" ")),
+                        _ => format!("👀_Twitch Moderation_ |\n*{0}*: /{1} {2}", real_created_by.sanitize(), moderation_action, args.join(" ").sanitize()),
 
                     });
                     // .tts(false)

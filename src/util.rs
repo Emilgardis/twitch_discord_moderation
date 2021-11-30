@@ -10,7 +10,7 @@ use tracing_log::NormalizeEvent;
 use ansi_term::{Color, Style};
 use anyhow::Context;
 use fmt::{time::FormatTime, FormattedFields};
-use std::fmt::Write;
+use std::{borrow::Cow, fmt::Write};
 use tracing::{
     field::{Field, Visit},
     Level, Subscriber,
@@ -122,6 +122,29 @@ impl Visit for EventFieldVisitor {
             "message" => self.record_message(value.to_string()),
             "log.target" | "log.module_path" | "log.file" | "log.line" => {}
             _ => self.record_debug(field, &value),
+        }
+    }
+}
+
+const MARKDOWN_TOKENS: &[char] = &['_', '*', '`', '~', '#', '+', '-'];
+
+pub trait Sanitize {
+    fn sanitize(&self) -> Cow<'_, str>;
+}
+
+impl<T> Sanitize for T
+where T: AsRef<str>
+{
+    fn sanitize(&self) -> Cow<'_, str> {
+        let this = self.as_ref();
+        if this.contains(MARKDOWN_TOKENS) {
+            let mut string = this.to_string();
+            for token in MARKDOWN_TOKENS {
+                string = string.replace(*token, &format!("\\{}", token));
+            }
+            Cow::Owned(string)
+        } else {
+            Cow::Borrowed(this)
         }
     }
 }
