@@ -1,17 +1,15 @@
-variable "DOCKER_TAG" {
-    default = "latest"
-}
-
-variable "DOCKER_REPO" {
-    default = "twitch-discord-moderation"
+variable "REV" {
+    default = "dev"
 }
 
 group "default" {
     targets = ["app"]
 }
 
+target "docker-metadata-action" {}
+
 target "app" {
-    tags = ["emilgardis/${DOCKER_REPO}:${DOCKER_TAG}"]
+    inherits = ["docker-metadata-action"]
     platforms = ["linux/amd64", "linux/arm64"]
     args = {
         BUILD_DEPS="musl-dev pkgconfig perl build-base openssl openssl-dev git"
