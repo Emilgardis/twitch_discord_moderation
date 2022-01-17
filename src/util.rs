@@ -1,7 +1,7 @@
 //! Convenience functions for usage
 
 use tracing_subscriber::{
-    fmt::{self, FmtContext, FormatEvent, FormatFields},
+    fmt::{self, FmtContext, FormatEvent, FormatFields, format::Writer},
     registry::LookupSpan,
 };
 
@@ -164,9 +164,7 @@ where
             .or_else(|| self.ctx.lookup_current());
 
         #[allow(deprecated)]
-        let scope = span
-            .into_iter()
-            .flat_map(|span| span.from_root().chain(core::iter::once(span)));
+        let scope = span.into_iter().flat_map(|span| span.scope().from_root());
 
         for span in scope {
             write!(f, "{}", bold.paint(span.metadata().name()))?;
@@ -200,11 +198,11 @@ where
     fn format_event(
         &self,
         ctx: &FmtContext<'_, S, N>,
-        writer: &mut dyn core::fmt::Write,
+        mut writer: Writer,
         event: &tracing::Event<'_>,
     ) -> core::fmt::Result {
         // Aug 27 13:18:21.944 DEBG Getting broadcaster status, channel_id:
-        tracing_subscriber::fmt::time::SystemTime.format_time(writer)?;
+        tracing_subscriber::fmt::time::SystemTime.format_time(&mut writer)?;
         write!(
             writer,
             " {} {} ",

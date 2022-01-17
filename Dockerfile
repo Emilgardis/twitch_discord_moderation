@@ -3,7 +3,7 @@ FROM --platform=$BUILDPLATFORM rust:1.58-alpine3.14 as planner
 WORKDIR /app
 RUN apk add --no-cache \
         musl-dev
-RUN --mount=type=cache,target=$CARGO_HOME/bin cargo insall cargo-chef --version 0.1.33
+RUN --mount=type=cache,target=$CARGO_HOME/bin cargo install cargo-chef --version 0.1.33
 COPY . .
 RUN ls -la
 RUN cargo chef prepare  --recipe-path recipe.json
