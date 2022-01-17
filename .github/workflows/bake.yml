@@ -40,7 +40,7 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=ref,event=branch
-            type=ref,event=pr
+            type=edge
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=sha
@@ -51,3 +51,15 @@ jobs:
           files: | 
             docker-bake.hcl
             ${{ steps.meta.outputs.bake-file}}
+          set: |
+            *.cache-from=type=gha
+            *.cache-to=type=gha
+      - name: Delete old images
+        uses: snok/container-retention-policy@v1
+        with:
+          image-names: ${{ env.IMAGE_NAME}}
+          cut-off: One day ago UTC
+          keep-at-least: 2
+          account-type: personal
+          filter-tags: sha-*
+          token: ${{ secrets.GH_TOKEN_DELETE }}
