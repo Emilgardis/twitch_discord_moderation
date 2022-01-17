@@ -1,7 +1,7 @@
 //! Convenience functions for usage
 
 use tracing_subscriber::{
-    fmt::{self, FmtContext, FormatEvent, FormatFields, format::Writer},
+    fmt::{self, format::Writer, FmtContext, FormatEvent, FormatFields},
     registry::LookupSpan,
 };
 
