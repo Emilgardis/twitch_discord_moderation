@@ -157,9 +157,15 @@ impl Subscriber {
         );
         tokio::pin!(ping_timer);
         tracing::info!("pinging every {} seconds with some jitter", 4 * 60);
+        let ping_guard = tokio::sync::Mutex::new(true);
+        *ping_guard.lock().await = true;
         loop {
             tokio::select!(
                     _ = &mut ping_timer => {
+                        if !*ping_guard.lock().await {
+                            anyhow::bail!("no pong received");
+                        }
+                        *ping_guard.lock().await = false;
                         tracing::trace!("sending ping");
                         s.send(Message::text(r#"{"type": "PING"}"#)).await.context("when sending ping")?;
                         ping_timer.as_mut().reset(tokio::time::Instant::now() + std::time::Duration::new(4 * 60, 0)
@@ -177,7 +183,7 @@ impl Subscriber {
                                 },
                                 _ => msg.context("when getting message")?,
                             };
-                            tracing::debug!("got message");
+                            tracing::trace!("got message");
                             match msg {
                                 Message::Text(msg) => {
                                     match twitch_api2::pubsub::Response::parse(&msg).context("when parsing pubsub response text") {
@@ -185,7 +191,12 @@ impl Subscriber {
                                             if let twitch_api2::pubsub::Response::Reconnect = response {
                                                 s = self.connect_and_send(twitch_api2::TWITCH_PUBSUB_URL.as_str(), opts).await?;
                                             }
-                                            tracing::debug!(message = ?response);
+                                            if response != twitch_api2::pubsub::Response::Pong {
+                                                tracing::debug!(message = ?response);
+                                            } else {
+                                                // set ping guard
+                                                *ping_guard.lock().await = true;
+                                            }
                                             if let twitch_api2::pubsub::Response::Response(ref _r) = response {
                                                 // TODO handle bad auth
                                             }
