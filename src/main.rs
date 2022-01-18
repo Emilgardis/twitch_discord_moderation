@@ -2,9 +2,9 @@ pub mod subscriber;
 pub mod util;
 pub mod webhook;
 use anyhow::Context;
-use clap::{ArgGroup, ArgSettings, Clap};
+use clap::{ArgGroup, ArgSettings, Parser};
 
-#[derive(Clap, Debug)]
+#[derive(Parser, Debug)]
 #[clap(about, version, long_version = concat!(env!("VERGEN_BUILD_SEMVER"),"-", env!("GIT_SHA"),"", "\nrustc: ", env!("VERGEN_RUSTC_SEMVER"), " ", env!("VERGEN_RUSTC_COMMIT_HASH"), "\nbuild timestamp: ", env!("VERGEN_BUILD_TIMESTAMP")),
     group = ArgGroup::new("token").multiple(false).required(false), 
     group = ArgGroup::new("service").multiple(true).requires("oauth2-service-url"), 
