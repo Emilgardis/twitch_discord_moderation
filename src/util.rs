@@ -170,6 +170,7 @@ where T: AsRef<str>
         if this.contains(MARKDOWN_TOKENS) {
             let mut string = this.to_string();
             for token in MARKDOWN_TOKENS {
+                // FIXME: Don't replace `\{token}`
                 string = string.replace(*token, &format!("\\{}", token));
             }
             Cow::Owned(string)
