@@ -39,10 +39,10 @@ impl Webhook {
                     }
                     match r.nonce.as_deref() {
                         Some(crate::subscriber::MOD_NONCE) => {
-                            tracing::info!("listening to moderator actions")
+                            tracing::info!("Listening to moderator actions")
                         }
                         _ => {
-                            tracing::warn!(message = ?r, "twitch responded with an unexpected message")
+                            tracing::warn!(message = ?r, "Twitch responded with an unexpected message")
                         }
                     }
                 }
