@@ -24,9 +24,17 @@ pub mod built_info {
 pub static LONG_VERSION: Lazy<String> = Lazy::new(|| {
     let version = if let Some(hash) = built_info::GIT_COMMIT_HASH {
         if let Some(true) = built_info::GIT_DIRTY {
-            format!("{} ({}*)", built_info::PKG_VERSION, &hash.get(..8).unwrap_or(hash))
+            format!(
+                "{} ({}*)",
+                built_info::PKG_VERSION,
+                &hash.get(..8).unwrap_or(hash)
+            )
         } else {
-            format!("{} ({})", built_info::PKG_VERSION, &hash.get(..8).unwrap_or(hash))
+            format!(
+                "{} ({})",
+                built_info::PKG_VERSION,
+                &hash.get(..8).unwrap_or(hash)
+            )
         }
     } else {
         built_info::PKG_VERSION.to_string()
