@@ -4,8 +4,6 @@ on:
     types: [opened, reopened, synchronize]
   push:
     branches: [main]
-env: 
-  MSRV: 1.58
 jobs:
   ci:
     name: CI
@@ -20,7 +18,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        rust: ["${{ env.MSRV }}"]
+        rust: [1.58]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
@@ -59,7 +57,7 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: ${{ env.MSRV }}
+          toolchain: 1.58
           override: true
           components: rustfmt
       - name: Run fmt -- --check
@@ -78,7 +76,7 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: ${{ env.MSRV }}
+          toolchain: 1.58
           override: true
           components: clippy
       - name: Cache cargo
@@ -91,7 +89,7 @@ jobs:
             ~/.cargo/git
             target
           key: ${{ runner.os }}-cargo-clippy-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-${{ env.MSRV }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-1.58-${{ hashFiles('**/Cargo.lock') }}
       - name: Run clippy --all-targets --no-default-features -- -D warnings
         uses: actions-rs/clippy-check@v1
         with:

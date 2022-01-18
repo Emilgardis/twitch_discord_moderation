@@ -6,7 +6,7 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.event.repository.name}}
-  IMAGE_NAME_FQ: ${{ github.repository_owner }}${{ github.repository }}
+  IMAGE_NAME_FQ: ${{ github.repository }}
 
 jobs:
   bake:
