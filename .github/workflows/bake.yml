@@ -59,4 +59,5 @@ jobs:
           keep-at-least: 2
           account-type: personal
           filter-tags: sha-*
+          skip-tags: edge,main,v*
           token: ${{ secrets.GH_TOKEN_DELETE }}

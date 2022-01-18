@@ -1,5 +1,6 @@
 //! Convenience functions for usage
 
+use once_cell::sync::Lazy;
 use tracing_subscriber::{
     fmt::{self, format::Writer, FmtContext, FormatEvent, FormatFields},
     registry::LookupSpan,
@@ -15,6 +16,27 @@ use tracing::{
     field::{Field, Visit},
     Level, Subscriber,
 };
+
+pub mod built_info {
+    include!(concat!(env!("OUT_DIR"), "/built.rs"));
+}
+
+pub static LONG_VERSION: Lazy<String> = Lazy::new(|| {
+    let version = if let Some(hash) = built_info::GIT_COMMIT_HASH {
+        if let Some(true) = built_info::GIT_DIRTY {
+            format!("{} ({}*)", built_info::PKG_VERSION, &hash.get(..8).unwrap_or(hash))
+        } else {
+            format!("{} ({})", built_info::PKG_VERSION, &hash.get(..8).unwrap_or(hash))
+        }
+    } else {
+        built_info::PKG_VERSION.to_string()
+    };
+    format!(
+        "{version}\nbuilt with {}\nbuild timestamp: {}",
+        built_info::RUSTC_VERSION,
+        built_info::BUILT_TIME_UTC
+    )
+});
 
 struct ColorLevel<'a>(&'a Level);
 

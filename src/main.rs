@@ -5,7 +5,7 @@ use anyhow::Context;
 use clap::{ArgGroup, ArgSettings, Parser};
 
 #[derive(Parser, Debug)]
-#[clap(about, version, long_version = concat!(env!("VERGEN_BUILD_SEMVER"),"-", env!("GIT_SHA"),"", "\nrustc: ", env!("VERGEN_RUSTC_SEMVER"), " ", env!("VERGEN_RUSTC_COMMIT_HASH"), "\nbuild timestamp: ", env!("VERGEN_BUILD_TIMESTAMP")),
+#[clap(about, version, long_version = &**util::LONG_VERSION,
     group = ArgGroup::new("token").multiple(false).required(false), 
     group = ArgGroup::new("service").multiple(true).requires("oauth2-service-url"), 
     group = ArgGroup::new("channel").multiple(true).required(false), 
