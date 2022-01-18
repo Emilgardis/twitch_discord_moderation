@@ -1,9 +1,5 @@
 # syntax = docker/dockerfile:1.2
-FROM --platform=$BUILDPLATFORM rust:1.58-alpine3.15 as planner
-WORKDIR /app
-RUN apk add --no-cache \
-        musl-dev
-FROM rust:1.58-alpine3.14 as builder
+FROM rust:1.58-alpine3.15 as builder
 WORKDIR /app
 ARG BUILD_DEPS
 RUN apk add --no-cache ${BUILD_DEPS}
