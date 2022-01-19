@@ -185,7 +185,9 @@ impl Webhook {
                     .send(|message| {
                         message.content(&format!(
                             "👀_Twitch Moderation_ |\n*{0}*: /{1} {2}",
-                            vip_added.created_by.sanitize(), "vip", vip_added.target_user_login.sanitize(),
+                            vip_added.created_by.sanitize(),
+                            "vip",
+                            vip_added.target_user_login.sanitize(),
                         ))
                     })
                     .await
@@ -196,25 +198,29 @@ impl Webhook {
                     moderation::ChannelAction::AddPermittedTerm => {
                         format!(
                             "👀_Twitch Moderation_ |\n*{0}*: Added permitted term `{1}`",
-                            channel_term.requester_login.sanitize(), channel_term.text
+                            channel_term.requester_login.sanitize(),
+                            channel_term.text
                         )
                     }
                     moderation::ChannelAction::DeletePermittedTerm => {
                         format!(
                             "👀_Twitch Moderation_ |\n*{0}*: Deleted permitted term `{1}`",
-                            channel_term.requester_login.sanitize(), channel_term.text
+                            channel_term.requester_login.sanitize(),
+                            channel_term.text
                         )
                     }
                     moderation::ChannelAction::AddBlockedTerm => {
                         format!(
                             "👀_Twitch Moderation_ |\n*{0}*: Added blocked term ||`{1}`||",
-                            channel_term.requester_login.sanitize(), channel_term.text
+                            channel_term.requester_login.sanitize(),
+                            channel_term.text
                         )
                     }
                     moderation::ChannelAction::DeleteBlockedTerm => {
                         format!(
                             "👀_Twitch Moderation_ |\n*{0}*: Deleted blocked term ||`{1}`||",
-                            channel_term.requester_login.sanitize(), channel_term.text
+                            channel_term.requester_login.sanitize(),
+                            channel_term.text
                         )
                     }
                     _ => (return Ok(())),
@@ -229,7 +235,8 @@ impl Webhook {
                     .send(|message| {
                         message.content(&format!(
                             "👀_Twitch Moderation_ |\n*{0}*: Added `{1}` as moderator",
-                            moderator_added.created_by.sanitize(), moderator_added.target_user_login
+                            moderator_added.created_by.sanitize(),
+                            moderator_added.target_user_login
                         ))
                     })
                     .await
