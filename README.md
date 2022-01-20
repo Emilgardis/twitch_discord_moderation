@@ -28,44 +28,72 @@ RUST_LOG=info
 
 This application also supports getting an oauth2 token from an external service on url. This service should return a token in a json body where the token string is in the field `access_token`, if not, specify the path with a pointer.
 
-
+<!--BEGIN commandline options-->
 ```
+twitch-discord-moderation 0.3.0
+Bot to send twitch moderator actions to a discord webhook
+
+USAGE:
+    twitch-discord-moderation [OPTIONS] --discord-webhook <DISCORD_WEBHOOK>
+
 OPTIONS:
-        --access-token <access-token>
-            OAuth2 Access token [env: ACCESS_TOKEN]
+        --access-token <ACCESS_TOKEN>
+            OAuth2 Access token
 
-        --channel-bot-name <channel-bot-name>
-            Name of channel bot [env: CHANNEL_BOT_NAME]
+            [env: ACCESS_TOKEN]
 
-        --channel-id <channel-id>
-            User ID of channel to monitor. If left out, defaults to owner of access token [env:
-            CHANNEL_ID]
+        --channel-bot-name <CHANNEL_BOT_NAME>
+            Name of channel bot
 
-        --channel-login <channel-login>
-            Name of channel to monitor. If left out, defaults to owner of access token [env:
-            CHANNEL_LOGIN]
+            [env: CHANNEL_BOT_NAME]
 
-        --discord-webhook <discord-webhook>
-            URL to discord webhook [env: DISCORD_WEBHOOK]
+        --channel-id <CHANNEL_ID>
+            User ID of channel to monitor. If left out, defaults to owner of access token
 
-        --oauth2-service-key <oauth2-service-key>
-            Bearer key for authorizing on the OAuth2 service url [env: OAUTH2_SERVICE_KEY]
+            [env: CHANNEL_ID]
 
-        --oauth2-service-pointer <oauth2-service-pointer>
-            Grab token by pointer. See https://tools.ietf.org/html/rfc6901 [env:
-            OAUTH2_SERVICE_POINTER]
+        --channel-login <CHANNEL_LOGIN>
+            Name of channel to monitor. If left out, defaults to owner of access token
 
-        --oauth2-service-refresh <oauth2-service-refresh>
+            [env: CHANNEL_LOGIN]
+
+        --discord-webhook <DISCORD_WEBHOOK>
+            URL to discord webhook
+
+            [env: DISCORD_WEBHOOK]
+
+    -h, --help
+            Print help information
+
+        --oauth2-service-key <OAUTH2_SERVICE_KEY>
+            Bearer key for authorizing on the OAuth2 service url
+
+            [env: OAUTH2_SERVICE_KEY]
+
+        --oauth2-service-pointer <OAUTH2_SERVICE_POINTER>
+            Grab token by pointer. See https://tools.ietf.org/html/rfc6901
+
+            [env: OAUTH2_SERVICE_POINTER]
+
+        --oauth2-service-refresh <OAUTH2_SERVICE_REFRESH>
             Grab a new token from the OAuth2 service this many seconds before it actually expires.
-            Default is 30 seconds [env: OAUTH2_SERVICE_REFRESH]
+            Default is 30 seconds
 
-        --oauth2-service-url <oauth2-service-url>
+            [env: OAUTH2_SERVICE_REFRESH]
+
+        --oauth2-service-url <OAUTH2_SERVICE_URL>
             URL to service that provides OAuth2 token. Called on start and whenever the token needs
             to be refreshed.
 
-            This application does not do any refreshing of tokens. [env: OAUTH2_SERVICE_URL]
-```
+            This application does not do any refreshing of tokens.
 
+            [env: OAUTH2_SERVICE_URL]
+
+    -V, --version
+            Print version information
+
+```
+<!--END commandline options-->
 
 <h5> License </h5>
 
