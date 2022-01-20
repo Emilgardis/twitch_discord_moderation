@@ -15,12 +15,12 @@ ARG RUSTFLAGS=-Ctarget-feature=-crt-static
 RUN --mount=type=cache,target=$CARGO_HOME/git \
     --mount=type=cache,target=$CARGO_HOME/registry \
     --mount=type=cache,sharing=private,target=/app/target \
-    cargo chef cook --release --recipe-path recipe.json
+    cargo chef cook --release --recipe-path recipe.json && cp target/ target-cache/
 COPY . .
 # Serve the dinner to cargo
 RUN --mount=type=cache,target=$CARGO_HOME/git \
     --mount=type=cache,target=$CARGO_HOME/registry \
-    cargo -V; cargo build --release --bin twitch-discord-moderation && mv /app/target/release/twitch-discord-moderation /app/twitch-discord-moderation
+    mv target-cache/ target/; cargo -V; cargo build --release --bin twitch-discord-moderation && mv /app/target/release/twitch-discord-moderation /app/twitch-discord-moderation
 FROM alpine:3.15 as runtime
 WORKDIR /app
 ARG RUN_DEPS
