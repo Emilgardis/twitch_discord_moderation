@@ -204,7 +204,7 @@ impl Subscriber {
                                                 .send(response)?;
                                         }
                                         Err(e) => {
-                                            tracing::warn!(error=%e, "Got unhandled pubsub message.");
+                                            tracing::warn!(error=?e, "Got unhandled pubsub message.");
                                         }
                                     }
 
