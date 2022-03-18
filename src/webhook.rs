@@ -88,7 +88,7 @@ impl Webhook {
                     .map(|s| s.as_str().to_lowercase());
                 let mut created_by_bot = false;
                 let real_created_by = match (created_by.clone(), bot_name) {
-                    (created_by, Some(bot_specified_name))
+                    (Some(created_by), Some(bot_specified_name))
                         if created_by.as_str() == bot_specified_name.to_lowercase() =>
                     {
                         match args
@@ -107,13 +107,14 @@ impl Webhook {
                             _ => bot_specified_name,
                         }
                     }
-                    (other, _) => other.to_string(),
+                    (Some(other), _) => other.to_string(),
+                    (None, _) => "<unknown>".to_string(),
                 };
 
                 self.webhook.send(|message| {
                     message.content(&match &moderation_action {
                         ModerationActionCommand::Delete =>  { format!("❌_Twitch Moderation_ |\n*{0}*: /delete {1} ||{2}||\n*{1}:{3}* message deleted",
-                            created_by.sanitize(), // Not real created by, since delete doesn't carry that information
+                            real_created_by.sanitize(), // Not real created by, since delete doesn't carry that information
                             self.add_streamcardlink(args.get(0).map_or("<unknown>", |u| u)),
                             args[1..args.len().checked_sub(1).unwrap_or(1)].join(" ").sanitize(),
                             target_user_id.sanitize(),
@@ -147,7 +148,7 @@ impl Webhook {
                         | moderation::ModerationActionCommand::ModifiedAutomodProperties
                         | moderation::ModerationActionCommand::AutomodRejected
                         | moderation::ModerationActionCommand::ApproveAutomodMessage
-                        | moderation::ModerationActionCommand::DeniedAutomodMessage => format!("👀_Twitch Moderation_ |\n*{0}*: /{1} ||{2}||", created_by, moderation_action, args.join(" ")),
+                        | moderation::ModerationActionCommand::DeniedAutomodMessage => format!("👀_Twitch Moderation_ |\n*{0}*: /{1} ||{2}||", real_created_by, moderation_action, args.join(" ")),
                         _ => format!("👀_Twitch Moderation_ |\n*{0}*: /{1} {2}", real_created_by.sanitize(), moderation_action, args.join(" ").sanitize()),
 
                     });

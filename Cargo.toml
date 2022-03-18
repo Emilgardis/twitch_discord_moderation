@@ -47,5 +47,5 @@ pretty_assertions = "1.0.0"
 [patch.crates-io]
 #twitch_api2 = { path = "../twitch_api2" }
 #twitch_oauth2 = { path = "../twitch_api2/twitch_oauth2" }
-#twitch_api2 = { git = "https://github.com/Emilgardis/twitch_api2.git", rev = "a4b9885" }
+twitch_api2 = { git = "https://github.com/Emilgardis/twitch_api2.git"}
 #tungstenite = {path = "../tungstenite-rs"}
