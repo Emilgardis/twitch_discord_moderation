@@ -1,8 +1,8 @@
+#[cfg(test)]
+pub mod ci;
 pub mod subscriber;
 pub mod util;
 pub mod webhook;
-#[cfg(test)]
-pub mod ci;
 
 use anyhow::Context;
 use clap::{ArgGroup, ArgSettings, Parser};
