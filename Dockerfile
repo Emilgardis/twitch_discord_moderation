@@ -14,13 +14,12 @@ COPY --from=planner /app/recipe.json recipe.json
 ARG RUSTFLAGS=-Ctarget-feature=-crt-static
 RUN --mount=type=cache,target=$CARGO_HOME/git \
     --mount=type=cache,target=$CARGO_HOME/registry \
-    --mount=type=cache,sharing=private,target=/app/target \
-    cargo chef cook --release --recipe-path recipe.json && cp target/ target-cache/
+    cargo chef cook --release --recipe-path recipe.json
 COPY . .
 # Serve the dinner to cargo
 RUN --mount=type=cache,target=$CARGO_HOME/git \
     --mount=type=cache,target=$CARGO_HOME/registry \
-    mv target-cache/ target/; cargo -V; cargo build --release --bin twitch-discord-moderation && mv /app/target/release/twitch-discord-moderation /app/twitch-discord-moderation
+    cargo -V; cargo build --release --bin twitch-discord-moderation && mv /app/target/release/twitch-discord-moderation /app/twitch-discord-moderation
 FROM alpine:3.15 as runtime
 WORKDIR /app
 ARG RUN_DEPS
