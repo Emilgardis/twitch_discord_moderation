@@ -3,15 +3,15 @@ use async_tungstenite::{tokio as tokio_at, tungstenite::Message};
 use futures::prelude::*;
 use tokio::sync;
 use tracing_futures::Instrument;
-use twitch_api2::twitch_oauth2::{self, TwitchToken, UserToken};
+use twitch_api::twitch_oauth2::{self, TwitchToken, UserToken};
 
 pub const MOD_NONCE: &str = "moderator";
 pub struct Subscriber {
     pub(crate) access_token: twitch_oauth2::UserToken,
-    pub channel_id: twitch_api2::types::UserId,
-    pub channel_login: twitch_api2::types::UserName,
-    pub token_id: twitch_api2::types::UserId,
-    pub pubsub_channel: sync::broadcast::Sender<twitch_api2::pubsub::Response>,
+    pub channel_id: twitch_api::types::UserId,
+    pub channel_login: twitch_api::types::UserName,
+    pub token_id: twitch_api::types::UserId,
+    pub pubsub_channel: sync::broadcast::Sender<twitch_api::pubsub::Response>,
 }
 
 pub async fn make_token<'a>(
@@ -86,7 +86,7 @@ pub async fn get_access_token(
 impl Subscriber {
     #[tracing::instrument(skip(opts))]
     pub async fn new(opts: &crate::Opts) -> Result<Self, anyhow::Error> {
-        use twitch_api2::client::ClientDefault;
+        use twitch_api::client::ClientDefault;
         let client = reqwest::Client::default_client();
         let access_token = get_access_token(&client, opts)
             .await
@@ -101,7 +101,7 @@ impl Subscriber {
             // use access token to fetch broadcaster login
             (
                 id.clone().into(),
-                twitch_api2::HelixClient::with_client(client.clone())
+                twitch_api::HelixClient::with_client(client.clone())
                     .get_user_from_id(id.clone(), &access_token)
                     .await
                     .context("when calling twitch api")?
@@ -111,7 +111,7 @@ impl Subscriber {
         } else if let Some(ref login) = opts.channel_login {
             // use access token to fetch broadcaster id
             (
-                twitch_api2::HelixClient::with_client(client.clone())
+                twitch_api::HelixClient::with_client(client.clone())
                     .get_user_from_login(login.clone(), &access_token)
                     .await
                     .context("when calling twitch api")?
@@ -147,7 +147,7 @@ impl Subscriber {
     ))]
     pub async fn run(mut self, opts: &crate::Opts) -> Result<(), anyhow::Error> {
         let mut s = self
-            .connect_and_send(twitch_api2::TWITCH_PUBSUB_URL.as_str(), opts)
+            .connect_and_send(twitch_api::TWITCH_PUBSUB_URL.as_str(), opts)
             .await
             .context("when establishing connection")?;
 
@@ -177,7 +177,7 @@ impl Subscriber {
                             let msg = match msg {
                                 Err(async_tungstenite::tungstenite::Error::Protocol(async_tungstenite::tungstenite::error::ProtocolError::ResetWithoutClosingHandshake)) => {
                                     tracing::warn!("connection was sent an unexpected frame or was reset, reestablishing it");
-                                    s = self.connect_and_send(twitch_api2::TWITCH_PUBSUB_URL.as_str(), opts).await.context("when reestablishing connection")?;
+                                    s = self.connect_and_send(twitch_api::TWITCH_PUBSUB_URL.as_str(), opts).await.context("when reestablishing connection")?;
 
                                     return Ok(())
                                 },
@@ -186,18 +186,18 @@ impl Subscriber {
                             tracing::trace!("got message");
                             match msg {
                                 Message::Text(msg) => {
-                                    match twitch_api2::pubsub::Response::parse(&msg).context("when parsing pubsub response text") {
+                                    match twitch_api::pubsub::Response::parse(&msg).context("when parsing pubsub response text") {
                                         Ok(response) => {
-                                            if let twitch_api2::pubsub::Response::Reconnect = response {
-                                                s = self.connect_and_send(twitch_api2::TWITCH_PUBSUB_URL.as_str(), opts).await?;
+                                            if let twitch_api::pubsub::Response::Reconnect = response {
+                                                s = self.connect_and_send(twitch_api::TWITCH_PUBSUB_URL.as_str(), opts).await?;
                                             }
-                                            if response != twitch_api2::pubsub::Response::Pong {
+                                            if response != twitch_api::pubsub::Response::Pong {
                                                 tracing::debug!(message = ?response);
                                             } else {
                                                 // set ping guard
                                                 *ping_guard.lock().await = true;
                                             }
-                                            if let twitch_api2::pubsub::Response::Response(ref _r) = response {
+                                            if let twitch_api::pubsub::Response::Response(ref _r) = response {
                                                 // TODO handle bad auth
                                             }
                                             self.pubsub_channel
@@ -214,6 +214,7 @@ impl Subscriber {
                                 Message::Binary(v) => {
                                     tracing::debug!("got unknown binary message {:2x?}", v);
                                 }
+                                Message::Frame(_) => {}
                             }
                             Ok(())
                         }.instrument(span).await?;
@@ -247,7 +248,7 @@ impl Subscriber {
         url: &str,
         opts: &crate::Opts,
     ) -> Result<async_tungstenite::WebSocketStream<tokio_at::ConnectStream>, anyhow::Error> {
-        use twitch_api2::pubsub::Topic as _;
+        use twitch_api::pubsub::Topic as _;
         let mut s = self
             .connect(url)
             .await
@@ -261,7 +262,7 @@ impl Subscriber {
             } else {
             }
         }
-        let topic = twitch_api2::pubsub::moderation::ChatModeratorActions {
+        let topic = twitch_api::pubsub::moderation::ChatModeratorActions {
             channel_id: self
                 .channel_id
                 .as_str()
@@ -275,21 +276,21 @@ impl Subscriber {
         }
         .into_topic();
         // if scopes doesn't contain required scope, then bail
-        if !<twitch_api2::pubsub::moderation::ChatModeratorActions as twitch_api2::pubsub::Topic>::SCOPE.iter().all(|s| self.access_token.scopes().contains(s)) {
+        if !<twitch_api::pubsub::moderation::ChatModeratorActions as twitch_api::pubsub::Topic>::SCOPE.iter().all(|s| self.access_token.scopes().contains(s)) {
             tracing::info!("token has scopes: {:?}", self.access_token.scopes());
-            anyhow::bail!("access token does not have valid scopes, required scope(s): {:?}", <twitch_api2::pubsub::moderation::ChatModeratorActions as twitch_api2::pubsub::Topic>::SCOPE.iter().map(|s| s.to_string()).collect::<Vec<_>>());
+            anyhow::bail!("access token does not have valid scopes, required scope(s): {:?}", <twitch_api::pubsub::moderation::ChatModeratorActions as twitch_api::pubsub::Topic>::SCOPE.iter().map(|s| s.to_string()).collect::<Vec<_>>());
         }
         tracing::info!("sending pubsub subscription topics to listen to");
-        s.send(Message::text(twitch_api2::pubsub::listen_command(
+        s.send(Message::text(twitch_api::pubsub::listen_command(
             &[topic],
             self.access_token.token().clone().secret(),
             Some(MOD_NONCE),
         )?))
         .await?;
 
-        // let topic = twitch_api2::pubsub::ChannelPointsChannelV1 { channel_id: id };
+        // let topic = twitch_api::pubsub::ChannelPointsChannelV1 { channel_id: id };
         // s.send(Message::text(
-        //     twitch_api2::pubsub::TopicSubscribe::Listen {
+        //     twitch_api::pubsub::TopicSubscribe::Listen {
         //         nonce: Some("points".to_string()),
         //         topics: vec![topic.into()],
         //         auth_token: self.broadcaster_token.token().clone(),
@@ -298,9 +299,9 @@ impl Subscriber {
         // ))
         // .await?;
 
-        // let topic = twitch_api2::pubsub::ChannelSubscribeEventsV1 { channel_id: id };
+        // let topic = twitch_api::pubsub::ChannelSubscribeEventsV1 { channel_id: id };
         // s.send(Message::text(
-        //     twitch_api2::pubsub::TopicSubscribe::Listen {
+        //     twitch_api::pubsub::TopicSubscribe::Listen {
         //         nonce: Some("subscribe".to_string()),
         //         topics: vec![topic.into()],
         //         auth_token: self.broadcaster_token.token().clone(),

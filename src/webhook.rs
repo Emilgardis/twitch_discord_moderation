@@ -1,6 +1,6 @@
 use crate::util::Sanitize;
 use tokio::sync;
-use twitch_api2::{pubsub::moderation, types};
+use twitch_api::{pubsub::moderation, types};
 pub struct Webhook {
     webhook: discord_webhook::Webhook,
     channel_login: types::UserName,
@@ -26,11 +26,11 @@ impl Webhook {
     #[tracing::instrument(name = "webhook", skip(self, recv))]
     pub async fn run(
         self,
-        mut recv: sync::broadcast::Receiver<twitch_api2::pubsub::Response>,
+        mut recv: sync::broadcast::Receiver<twitch_api::pubsub::Response>,
     ) -> Result<(), anyhow::Error> {
         while let Ok(msg) = recv.recv().await {
             match msg {
-                twitch_api2::pubsub::Response::Response(r) => {
+                twitch_api::pubsub::Response::Response(r) => {
                     if !r.is_successful() {
                         anyhow::bail!(
                             "pubsub returned an error {}",
@@ -46,8 +46,8 @@ impl Webhook {
                         }
                     }
                 }
-                twitch_api2::pubsub::Response::Message { data } => match data {
-                    twitch_api2::pubsub::TopicData::ChatModeratorActions { reply, .. } => {
+                twitch_api::pubsub::Response::Message { data } => match data {
+                    twitch_api::pubsub::TopicData::ChatModeratorActions { reply, .. } => {
                         tracing::info!(moderation_action = ?reply, "got mod action");
                         self.post_moderator_action(*reply).await?;
                     }
@@ -55,10 +55,10 @@ impl Webhook {
                         tracing::warn!("got unknown message: {:?}", message)
                     }
                 },
-                twitch_api2::pubsub::Response::Pong => {
+                twitch_api::pubsub::Response::Pong => {
                     tracing::trace!("PONG from twitch")
                 }
-                twitch_api2::pubsub::Response::Reconnect => {
+                twitch_api::pubsub::Response::Reconnect => {
                     tracing::error!("Twitch needs to reconnect")
                 }
             }
@@ -71,7 +71,7 @@ impl Webhook {
         &self,
         action: moderation::ChatModeratorActionsReply,
     ) -> Result<(), anyhow::Error> {
-        use twitch_api2::pubsub::moderation::ModerationActionCommand;
+        use twitch_api::pubsub::moderation::ModerationActionCommand;
         match action {
             moderation::ChatModeratorActionsReply::ModerationAction(
                 moderation::ModerationAction {
@@ -87,7 +87,7 @@ impl Webhook {
                     .clone()
                     .map(|s| s.as_str().to_lowercase());
                 let mut created_by_bot = false;
-                let real_created_by = match (created_by.clone(), bot_name) {
+                let real_created_by = match (created_by, bot_name) {
                     (Some(created_by), Some(bot_specified_name))
                         if created_by.as_str() == bot_specified_name.to_lowercase() =>
                     {
