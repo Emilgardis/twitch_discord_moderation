@@ -30,7 +30,7 @@ This application also supports getting an oauth2 token from an external service 
 
 <!--BEGIN commandline options-->
 ```text
-twitch-discord-moderation 0.4.1
+twitch-discord-moderation 0.4.2
 Bot to send twitch moderator actions to a discord webhook
 
 USAGE:
