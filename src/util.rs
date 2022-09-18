@@ -64,7 +64,8 @@ impl<'a> core::fmt::Display for ColorLevel<'a> {
 struct FullCtx<'a, S, N>
 where
     S: Subscriber + for<'lookup> LookupSpan<'lookup>,
-    N: for<'writer> FormatFields<'writer> + 'static, {
+    N: for<'writer> FormatFields<'writer> + 'static,
+{
     ctx: &'a FmtContext<'a, S, N>,
     span: Option<&'a tracing::span::Id>,
 }
@@ -78,7 +79,9 @@ where
         Self { ctx, span }
     }
 
-    fn bold(&self) -> Style { Style::new().bold() }
+    fn bold(&self) -> Style {
+        Style::new().bold()
+    }
 }
 
 // TODO: This should maybe be a FormatFields instead?
@@ -163,7 +166,8 @@ pub trait Sanitize {
 }
 
 impl<T> Sanitize for T
-where T: AsRef<str>
+where
+    T: AsRef<str>,
 {
     fn sanitize(&self) -> Cow<'_, str> {
         let this = self.as_ref();
