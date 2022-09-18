@@ -43,6 +43,9 @@ fn main() -> xshell::Result<()> {
         let has_tag = cmd!(sh, "git tag --list")
             .read()?
             .lines()
+            .inspect(|s| {
+                dbg!(s);
+            })
             .any(|it| it.trim() == tag);
         if !has_tag {
             let current_branch = cmd!(sh, "git branch --show-current").read()?;
