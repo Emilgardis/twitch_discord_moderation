@@ -44,4 +44,5 @@ jobs:
       - uses: Swatinem/rust-cache@v1.3.0
         with:
           cache-on-failure: true
+      - run: git tag --list
       - run: cargo xtask
