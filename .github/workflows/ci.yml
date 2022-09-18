@@ -34,6 +34,7 @@ jobs:
         with:
           submodules: recursive
           fetch-depth: 0 # fetch tags for publish
+          ssh-key: "${{ secrets.COMMIT_KEY }}" # use deploy key to trigger workflow
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@v1
         with:
