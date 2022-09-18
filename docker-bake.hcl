@@ -16,10 +16,3 @@ target "app" {
         RUN_DEPS="ca-certificates openssl libgcc"
     }
 }
-
-target "app-v7" {
-    inherits = ["app"]
-    // armv7 is broken, see https://github.com/docker/buildx/issues/395 
-    // rust-alpine doesn't  support it either
-    platforms = ["linux/arm/v7"]
-}

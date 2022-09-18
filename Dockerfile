@@ -1,5 +1,5 @@
 # syntax = docker/dockerfile:1.2
-FROM lukemathwalker/cargo-chef:latest-rust-1.58.0-alpine3.15 as chef
+FROM lukemathwalker/cargo-chef:latest-rust-1.63-alpine3.16 as chef
 WORKDIR /app
 ARG BUILD_DEPS
 RUN apk add --no-cache ${BUILD_DEPS}
@@ -9,7 +9,7 @@ COPY . .
 ARG RUSTFLAGS=-Ctarget-feature=-crt-static
 RUN cargo chef prepare --recipe-path recipe.json
 # Cook the dinner
-FROM chef AS builder 
+FROM chef AS builder
 COPY --from=planner /app/recipe.json recipe.json
 ARG RUSTFLAGS=-Ctarget-feature=-crt-static
 RUN --mount=type=cache,target=$CARGO_HOME/git \

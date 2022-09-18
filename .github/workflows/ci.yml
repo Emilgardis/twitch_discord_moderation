@@ -18,7 +18,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        rust: [1.58]
+        rust: [1.63]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
@@ -76,7 +76,7 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: 1.58
+          toolchain: 1.63
           override: true
           components: clippy
       - name: Cache cargo
@@ -89,7 +89,7 @@ jobs:
             ~/.cargo/git
             target
           key: ${{ runner.os }}-cargo-clippy-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-1.58-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-1.63-${{ hashFiles('**/Cargo.lock') }}
       - name: Run clippy --all-targets --no-default-features -- -D warnings
         uses: actions-rs/clippy-check@v1
         with:
