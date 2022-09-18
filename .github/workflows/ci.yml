@@ -7,46 +7,11 @@ on:
 jobs:
   ci:
     name: CI
-    needs: [test, fmt, clippy]
+    needs: [test, fmt, xtask]
     runs-on: ubuntu-latest
     steps:
       - name: Done
         run: exit 0
-  test:
-    name: Tests
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest]
-        rust: [1.63]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          submodules: recursive
-      - name: Install rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: ${{ matrix.rust }}
-          override: true
-      - name: Ready cache
-        if: matrix.os == 'ubuntu-latest'
-        run: sudo chown -R $(whoami):$(id -ng) ~/.cargo/
-      - name: Cache cargo
-        uses: actions/cache@v1
-        id: cache
-        with:
-          path: |
-            ~/.cargo/registry/index
-            ~/.cargo/registry/cache
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ hashFiles('**/Cargo.lock') }}
-      - name: Test
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --all-targets
   fmt:
     name: Rustfmt
     runs-on: ubuntu-latest
@@ -66,37 +31,22 @@ jobs:
           command: fmt
           args: -- --check
 
-  clippy:
-    name: Clippy
+  xtask:
+    name: Run CI
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
         with:
           submodules: recursive
-      - uses: actions-rs/toolchain@v1
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@v1
         with:
-          profile: minimal
-          toolchain: 1.63
-          override: true
-          components: clippy
-      - name: Cache cargo
-        uses: actions/cache@v1
-        id: cache
-        with:
-          path: |
-            ~/.cargo/registry/index
-            ~/.cargo/registry/cache
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-clippy-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-1.63-${{ hashFiles('**/Cargo.lock') }}
-      - name: Run clippy --all-targets --no-default-features -- -D warnings
-        uses: actions-rs/clippy-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-targets --no-default-features -- -D warnings
-      - name: Run clippy --all-targets --all-features -- -D warnings
-        uses: actions-rs/clippy-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-targets --all-features -- -D warnings
+          toolchain: ${{ inputs.toolchain }}
+          target: ${{ inputs.target }}
+          components: ${{ inputs.components }}
+
+      - name: Install rust matcher
+        run: echo "::add-matcher::.github/rust.json"
+        shell: bash
+      - uses: Swatinem/rust-cache@v1.3.0
+      - run: cargo xtask

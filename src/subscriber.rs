@@ -123,7 +123,7 @@ impl Subscriber {
             // FIXME: Use the same client?
             tracing::info!("Using the same user_id as token for channel id");
             (
-                token_user_id.clone().into(),
+                token_user_id.clone(),
                 access_token
                     .login()
                     .context("no user login attached to token")?
@@ -135,7 +135,7 @@ impl Subscriber {
             access_token,
             channel_id,
             channel_login,
-            token_id: token_user_id.into(),
+            token_id: token_user_id,
             pubsub_channel: sync::broadcast::channel(16).0,
         })
     }
