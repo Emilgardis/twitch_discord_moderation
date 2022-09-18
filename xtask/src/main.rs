@@ -55,7 +55,7 @@ fn main() -> xshell::Result<()> {
                 eprintln!("{}", cmd!(sh, "git push --tags"));
             } else {
                 cmd!(sh, "git tag {tag}").run()?;
-                cmd!(sh, "git push --tags").run()?;
+                cmd!(sh, "git push origin {tag}").run()?;
             }
         }
     }
