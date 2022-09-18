@@ -36,7 +36,8 @@ fn main() -> xshell::Result<()> {
             .read()?
             .rsplit_once('@')
             .unwrap()
-            .1.trim()
+            .1
+            .trim()
             .to_string();
         let tag = format!("v{version}");
         let has_tag = cmd!(sh, "git tag --list")
