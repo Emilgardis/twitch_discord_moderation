@@ -36,7 +36,7 @@ fn main() -> xshell::Result<()> {
             .read()?
             .rsplit_once('@')
             .unwrap()
-            .1
+            .1.trim()
             .to_string();
         let tag = format!("v{version}");
         let has_tag = cmd!(sh, "git tag --list")
@@ -45,8 +45,8 @@ fn main() -> xshell::Result<()> {
             .any(|it| it.trim() == tag);
         if !has_tag {
             let current_branch = cmd!(sh, "git branch --show-current").read()?;
-            let dry_run = sh.var("CI").is_err() || has_tag || current_branch != "main";
-            eprintln!("Publishing{}!", if dry_run { " (dry run)" } else { "" });
+            let dry_run = sh.var("CI").is_err() || current_branch != "main";
+            eprintln!("Taging!{}!", if dry_run { " (dry run)" } else { "" });
 
             if dry_run {
                 eprintln!("{}", cmd!(sh, "git tag {tag}"));
