@@ -12,7 +12,7 @@ services:
   twitch-discord-moderation:
     image: emilgardis/twitch-discord-moderation:latest
     env_file: .env
-    environment: 
+    environment:
       RUST_LOG: "info"
     restart: "unless-stopped"
 ```
@@ -30,7 +30,7 @@ This application also supports getting an oauth2 token from an external service 
 
 <!--BEGIN commandline options-->
 ```
-twitch-discord-moderation 0.3.0
+twitch-discord-moderation 0.4.0
 Bot to send twitch moderator actions to a discord webhook
 
 USAGE:
