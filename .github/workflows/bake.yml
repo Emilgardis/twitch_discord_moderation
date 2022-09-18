@@ -41,7 +41,7 @@ jobs:
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=sha
-      - run: echo "BUILD_ARM=true" >> $GITHUB_ENV
+      - run: echo "build_arm=true" >> $GITHUB_ENV
         if: startsWith(github.ref, 'refs/tags/')
       - name: Build and push
         uses: docker/bake-action@v1.6.0

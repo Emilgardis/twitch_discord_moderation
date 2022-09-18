@@ -29,8 +29,8 @@ RUST_LOG=info
 This application also supports getting an oauth2 token from an external service on url. This service should return a token in a json body where the token string is in the field `access_token`, if not, specify the path with a pointer.
 
 <!--BEGIN commandline options-->
-```
-twitch-discord-moderation 0.4.0
+```text
+twitch-discord-moderation 0.4.1
 Bot to send twitch moderator actions to a discord webhook
 
 USAGE:

@@ -1540,7 +1540,7 @@ dependencies = [
 
 [[package]]
 name = "twitch-discord-moderation"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "ansi_term",
  "anyhow",
