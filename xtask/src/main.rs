@@ -42,7 +42,7 @@ fn main() -> xshell::Result<()> {
         let tag = format!("v{version}");
 
         // https://github.com/actions/checkout/issues/206
-        cmd!(sh, "git fetch --prune --unshallow --tags").run()?;
+        cmd!(sh, "git fetch --prune --unshallow --tags").run().ok();
 
         let has_tag = cmd!(sh, "git tag --list")
             .read()?
