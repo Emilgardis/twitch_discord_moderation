@@ -16,7 +16,7 @@ jobs:
     name: Rustfmt
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: recursive
       - name: Install Rust toolchain
@@ -30,7 +30,7 @@ jobs:
     name: Run CI
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: recursive
       - name: Install Rust toolchain
@@ -41,7 +41,7 @@ jobs:
       - name: Install rust matcher
         run: echo "::add-matcher::.github/rust.json"
         shell: bash
-      - uses: Swatinem/rust-cache@v1.3.0
+      - uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: true
       - run: git tag --list
