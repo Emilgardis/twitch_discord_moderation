@@ -45,7 +45,7 @@ fn main() -> xshell::Result<()> {
             .any(|it| it.trim() == tag);
         if !has_tag {
             let current_branch = cmd!(sh, "git branch --show-current").read()?;
-            let dry_run = sh.var("CI").is_err() || has_tag || current_branch != "master";
+            let dry_run = sh.var("CI").is_err() || has_tag || current_branch != "main";
             eprintln!("Publishing{}!", if dry_run { " (dry run)" } else { "" });
 
             if dry_run {
