@@ -7,7 +7,7 @@ on:
 jobs:
   ci:
     name: CI
-    needs: [test, fmt, xtask]
+    needs: [fmt, xtask]
     runs-on: ubuntu-latest
     steps:
       - name: Done
