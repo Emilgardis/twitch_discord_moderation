@@ -102,7 +102,7 @@ impl Subscriber {
             (
                 id.clone().into(),
                 twitch_api::HelixClient::with_client(client.clone())
-                    .get_user_from_id(id.clone(), &access_token)
+                    .get_user_from_id(id, &access_token)
                     .await
                     .context("when calling twitch api")?
                     .with_context(|| format!("there is no user id {}", &id))?
@@ -112,7 +112,7 @@ impl Subscriber {
             // use access token to fetch broadcaster id
             (
                 twitch_api::HelixClient::with_client(client.clone())
-                    .get_user_from_login(login.clone(), &access_token)
+                    .get_user_from_login(login, &access_token)
                     .await
                     .context("when calling twitch api")?
                     .with_context(|| format!("there is no user with login name {}", &login))?

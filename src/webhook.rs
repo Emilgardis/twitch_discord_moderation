@@ -224,7 +224,7 @@ impl Webhook {
                             channel_term.text
                         )
                     }
-                    _ => (return Ok(())),
+                    _ => return Ok(()),
                 };
                 self.webhook
                     .send(|message| message.content(&msg))
