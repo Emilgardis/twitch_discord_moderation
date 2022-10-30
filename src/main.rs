@@ -5,7 +5,7 @@ pub mod util;
 pub mod webhook;
 
 use anyhow::Context;
-use clap::{ArgGroup, Parser, builder::ArgPredicate};
+use clap::{builder::ArgPredicate, ArgGroup, Parser};
 
 #[derive(Parser, Debug)]
 #[clap(about, version, long_version = &**util::LONG_VERSION,
@@ -39,10 +39,22 @@ pub struct Opts {
     #[clap(long, env, hide_env = true, group = "service")]
     pub oauth2_service_key: Option<Secret>,
     /// Grab token by pointer. See https://tools.ietf.org/html/rfc6901
-    #[clap(long, env, hide_env = true, group = "service", default_value_if("oauth2-service-url", ArgPredicate::IsPresent, Some("/access_token")))]
+    #[clap(
+        long,
+        env,
+        hide_env = true,
+        group = "service",
+        default_value_if("oauth2-service-url", ArgPredicate::IsPresent, Some("/access_token"))
+    )]
     pub oauth2_service_pointer: Option<String>,
     /// Grab a new token from the OAuth2 service this many seconds before it actually expires. Default is 30 seconds
-    #[clap(long, env, hide_env = true, group = "service", default_value_if("oauth2-service-url", ArgPredicate::IsPresent, Some("30")))]
+    #[clap(
+        long,
+        env,
+        hide_env = true,
+        group = "service",
+        default_value_if("oauth2-service-url", ArgPredicate::IsPresent, Some("30"))
+    )]
     pub oauth2_service_refresh: Option<u64>,
     /// Name of channel bot.
     #[clap(long, env, hide_env = true)]
