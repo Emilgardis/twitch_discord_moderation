@@ -30,67 +30,45 @@ This application also supports getting an oauth2 token from an external service 
 
 <!--BEGIN commandline options-->
 ```text
-twitch-discord-moderation 0.4.2
 Bot to send twitch moderator actions to a discord webhook
 
-USAGE:
-    twitch-discord-moderation [OPTIONS] --discord-webhook <DISCORD_WEBHOOK>
+Usage: twitch-discord-moderation [OPTIONS] --discord-webhook <DISCORD_WEBHOOK>
 
-OPTIONS:
-        --access-token <ACCESS_TOKEN>
-            OAuth2 Access token
+Options:
+      --discord-webhook <DISCORD_WEBHOOK>
+          URL to discord webhook
 
-            [env: ACCESS_TOKEN]
+      --access-token <ACCESS_TOKEN>
+          OAuth2 Access token
 
-        --channel-bot-name <CHANNEL_BOT_NAME>
-            Name of channel bot
+      --channel-login <CHANNEL_LOGIN>
+          Name of channel to monitor. If left out, defaults to owner of access token
 
-            [env: CHANNEL_BOT_NAME]
+      --channel-id <CHANNEL_ID>
+          User ID of channel to monitor. If left out, defaults to owner of access token
 
-        --channel-id <CHANNEL_ID>
-            User ID of channel to monitor. If left out, defaults to owner of access token
+      --oauth2-service-url <OAUTH2_SERVICE_URL>
+          URL to service that provides OAuth2 token. Called on start and whenever the token needs to be refreshed.
 
-            [env: CHANNEL_ID]
+          This application does not do any refreshing of tokens.
 
-        --channel-login <CHANNEL_LOGIN>
-            Name of channel to monitor. If left out, defaults to owner of access token
+      --oauth2-service-key <OAUTH2_SERVICE_KEY>
+          Bearer key for authorizing on the OAuth2 service url
 
-            [env: CHANNEL_LOGIN]
+      --oauth2-service-pointer <OAUTH2_SERVICE_POINTER>
+          Grab token by pointer. See https://tools.ietf.org/html/rfc6901
 
-        --discord-webhook <DISCORD_WEBHOOK>
-            URL to discord webhook
+      --oauth2-service-refresh <OAUTH2_SERVICE_REFRESH>
+          Grab a new token from the OAuth2 service this many seconds before it actually expires. Default is 30 seconds
 
-            [env: DISCORD_WEBHOOK]
+      --channel-bot-name <CHANNEL_BOT_NAME>
+          Name of channel bot
 
-    -h, --help
-            Print help information
+  -h, --help
+          Print help information (use `-h` for a summary)
 
-        --oauth2-service-key <OAUTH2_SERVICE_KEY>
-            Bearer key for authorizing on the OAuth2 service url
-
-            [env: OAUTH2_SERVICE_KEY]
-
-        --oauth2-service-pointer <OAUTH2_SERVICE_POINTER>
-            Grab token by pointer. See https://tools.ietf.org/html/rfc6901
-
-            [env: OAUTH2_SERVICE_POINTER]
-
-        --oauth2-service-refresh <OAUTH2_SERVICE_REFRESH>
-            Grab a new token from the OAuth2 service this many seconds before it actually expires.
-            Default is 30 seconds
-
-            [env: OAUTH2_SERVICE_REFRESH]
-
-        --oauth2-service-url <OAUTH2_SERVICE_URL>
-            URL to service that provides OAuth2 token. Called on start and whenever the token needs
-            to be refreshed.
-
-            This application does not do any refreshing of tokens.
-
-            [env: OAUTH2_SERVICE_URL]
-
-    -V, --version
-            Print version information
+  -V, --version
+          Print version information
 
 ```
 <!--END commandline options-->
