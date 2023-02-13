@@ -38,7 +38,7 @@ pub async fn get_access_token(
             oauth_service_url
         );
 
-        let mut request = client.get(oauth_service_url);
+        let mut request = client.get(oauth_service_url.clone());
         if let Some(ref key) = opts.oauth2_service_key {
             request = request.bearer_auth(key.secret());
         }
@@ -79,7 +79,7 @@ pub async fn get_access_token(
             }
         }
     } else {
-        panic!("got empty vals for token cli group")
+        panic!("got empty vals for token cli group: {:?}", opts)
     }
 }
 

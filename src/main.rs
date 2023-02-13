@@ -16,7 +16,7 @@ use clap::{builder::ArgPredicate, ArgGroup, Parser};
 pub struct Opts {
     /// URL to discord webhook.
     #[clap(long, env, hide_env = true, value_parser = url::Url::parse)]
-    pub discord_webhook: String,
+    pub discord_webhook: url::Url,
     /// OAuth2 Access token
     #[clap(long, env, hide_env = true, group = "token",
         value_parser = is_token, required_unless_present = "service"
@@ -31,10 +31,10 @@ pub struct Opts {
     /// URL to service that provides OAuth2 token. Called on start and whenever the token needs to be refreshed.
     ///
     /// This application does not do any refreshing of tokens.
-    #[clap(long, env, hide_env = true, group = "token",
+    #[clap(long, env, hide_env = true, group = "service",
         value_parser = url::Url::parse, required_unless_present = "token"
     )]
-    pub oauth2_service_url: Option<String>,
+    pub oauth2_service_url: Option<url::Url>,
     /// Bearer key for authorizing on the OAuth2 service url.
     #[clap(long, env, hide_env = true, group = "service")]
     pub oauth2_service_key: Option<Secret>,
@@ -44,7 +44,7 @@ pub struct Opts {
         env,
         hide_env = true,
         group = "service",
-        default_value_if("oauth2-service-url", ArgPredicate::IsPresent, Some("/access_token"))
+        default_value_if("oauth2_service_url", ArgPredicate::IsPresent, Some("/access_token"))
     )]
     pub oauth2_service_pointer: Option<String>,
     /// Grab a new token from the OAuth2 service this many seconds before it actually expires. Default is 30 seconds
@@ -53,7 +53,7 @@ pub struct Opts {
         env,
         hide_env = true,
         group = "service",
-        default_value_if("oauth2-service-url", ArgPredicate::IsPresent, Some("30"))
+        default_value_if("oauth2_service_url", ArgPredicate::IsPresent, Some("30"))
     )]
     pub oauth2_service_refresh: Option<u64>,
     /// Name of channel bot.

@@ -17,7 +17,7 @@ impl Webhook {
 
     pub fn new(channel_login: types::UserName, opts: &crate::Opts) -> Webhook {
         Webhook {
-            webhook: discord_webhook::Webhook::from_url(&opts.discord_webhook),
+            webhook: discord_webhook::Webhook::from_url(opts.discord_webhook.as_str()),
             channel_login,
             channel_bot_name: opts.channel_bot_name.clone().map(types::DisplayName::new),
         }
