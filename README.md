@@ -1,7 +1,7 @@
-Twitch Discord Moderation | Sync mod actions with discord
+Twitch Discord Moderation | Log mod actions with discord
 ============================================
 
-Sync moderator actions with a discord channel.
+Log moderator actions with a discord channel.
 
 Example usage with docker-compose
 
