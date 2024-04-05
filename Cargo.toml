@@ -20,14 +20,14 @@ tracing-subscriber = { version = "0.3.16", features = [
     "fmt",
 ] }
 tracing-futures = "0.2.5"
-tracing-log = "0.1.3"
+tracing-log = "0.2.0"
 anyhow = "1.0.66"
 chrono = "0.4.22"
-ansi_term = "0.12.1"
-dotenv = "0.15.0"
-twitch_api = { version = "0.7.0-alpha.1", features = ["reqwest", "helix", "pubsub"] }
-async-tungstenite = { version = "0.18.0", features = ["tokio-native-tls"] }
-reqwest = { version = "0.11.12", features = ["json"] }
+owo-colors = "4"
+dotenvy = "0.15.7"
+twitch_api = { git = "https://github.com/twitch-rs/twitch_api.git", features = ["reqwest", "helix", "pubsub"] }
+async-tungstenite = { version = "0.25.1", features = ["tokio-native-tls"] }
+reqwest = { version = "0.12.2", features = ["json"] }
 url = "2.3.1"
 futures = "0.3.25"
 discord_webhook = { git = "https://github.com/thoo0224/webhook-rs", rev = "dc217e1fe", package = "webhook" }
@@ -42,7 +42,7 @@ once_cell = "1.16.0"
 members = ["xtask"]
 
 [build-dependencies]
-built = { version = "0.5.1", features = ["chrono", "git2"] }
+built = { version = "0.7.1", features = ["chrono", "git2"] }
 
 [dev-dependencies]
 pretty_assertions = "1.3.0"
@@ -52,7 +52,7 @@ pretty_assertions = "1.3.0"
 
 [patch.crates-io]
 #twitch_api = { path = "../twitch_api" }
-#twitch_oauth2 = { path = "../twitch_api/twitch_oauth2" }
+#twitch_oauth2 = { git = "https://github.com/twitch-rs/twitch_api.git" }
 twitch_api = { git = "https://github.com/twitch-rs/twitch_api.git" }
 twitch_types = { git = "https://github.com/twitch-rs/twitch_api.git" }
 #tungstenite = {path = "../tungstenite-rs"}

@@ -10,7 +10,7 @@ use clap::{builder::ArgPredicate, ArgGroup, Parser};
 #[derive(Parser, Debug)]
 #[clap(about, version, long_version = &**util::LONG_VERSION,
     group = ArgGroup::new("token").multiple(false).required(false),
-    group = ArgGroup::new("service").multiple(true).requires("oauth2-service-url"),
+    group = ArgGroup::new("service").multiple(true).requires("oauth2_service_url"),
     group = ArgGroup::new("channel").multiple(true).required(false),
 )]
 pub struct Opts {
@@ -96,7 +96,7 @@ impl std::fmt::Debug for Secret {
 
 #[tokio::main]
 async fn main() {
-    let _ = dotenv::dotenv().with_context(|| "couldn't load .env file"); //ignore error
+    let _ = dotenvy::dotenv().with_context(|| "couldn't load .env file"); //ignore error
     let _ = util::build_logger();
 
     let opts = Opts::parse();

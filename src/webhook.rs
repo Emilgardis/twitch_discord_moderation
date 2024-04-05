@@ -61,6 +61,7 @@ impl Webhook {
                 twitch_api::pubsub::Response::Reconnect => {
                     tracing::error!("Twitch needs to reconnect")
                 }
+                _ => {}
             }
         }
         Ok(())

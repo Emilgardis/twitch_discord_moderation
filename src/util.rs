@@ -8,9 +8,9 @@ use tracing_subscriber::{
 
 use tracing_log::NormalizeEvent;
 
-use ansi_term::{Color, Style};
 use anyhow::Context;
 use fmt::{time::FormatTime, FormattedFields};
+use owo_colors::OwoColorize;
 use std::{borrow::Cow, fmt::Write};
 use tracing::{
     field::{Field, Visit},
@@ -51,11 +51,11 @@ struct ColorLevel<'a>(&'a Level);
 impl<'a> core::fmt::Display for ColorLevel<'a> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match *self.0 {
-            Level::TRACE => Color::Purple.paint("TRACE"),
-            Level::DEBUG => Color::Blue.paint("DEBUG"),
-            Level::INFO => Color::Green.paint("INFO "),
-            Level::WARN => Color::Yellow.paint("WARN "),
-            Level::ERROR => Color::Red.paint("ERROR"),
+            Level::TRACE => "TRACE".purple().to_string(),
+            Level::DEBUG => "DEBUG".blue().to_string(),
+            Level::INFO => "INFO ".green().to_string(),
+            Level::WARN => "WARN ".yellow().to_string(),
+            Level::ERROR => "ERROR".red().to_string(),
         }
         .fmt(f)
     }
@@ -77,10 +77,6 @@ where
 {
     pub(crate) fn new(ctx: &'a FmtContext<'a, S, N>, span: Option<&'a tracing::span::Id>) -> Self {
         Self { ctx, span }
-    }
-
-    fn bold(&self) -> Style {
-        Style::new().bold()
     }
 }
 
@@ -131,11 +127,9 @@ impl Visit for EventFieldVisitor {
 
         let _ = write!(
             s,
-            "{pre}{field}{pre}: {value:?}{suf}",
-            pre = Color::RGB(128, 128, 128).dimmed().prefix(),
-            suf = Color::RGB(128, 128, 128).dimmed().suffix(),
-            field = Style::new().underline().paint(field.name()),
-            value = value,
+            "{field}: {value:?}",
+            field = field.name().color(owo_colors::Rgb(128, 128, 128)),
+            value = value.color(owo_colors::Rgb(128, 128, 128)).dimmed(),
         );
     }
 
@@ -190,7 +184,6 @@ where
     N: for<'writer> FormatFields<'writer> + 'static,
 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        let bold = self.bold();
         let mut seen = false;
 
         let span = self
@@ -202,7 +195,7 @@ where
         let scope = span.into_iter().flat_map(|span| span.scope().from_root());
 
         for span in scope {
-            write!(f, "{}", bold.paint(span.metadata().name()))?;
+            write!(f, "{}", span.metadata().name().bold())?;
             seen = true;
 
             let ext = span.extensions();
@@ -210,7 +203,7 @@ where
                 .get::<FormattedFields<N>>()
                 .expect("Unable to find FormattedFields in extensions; this is a bug");
             if !fields.is_empty() {
-                write!(f, "{}{}{}", bold.paint("{"), fields, bold.paint("}"))?;
+                write!(f, "{}{}{}", "{".bold(), fields, "}".bold())?;
             }
             f.write_char(':')?;
         }
@@ -242,11 +235,10 @@ where
             writer,
             " {} {} ",
             ColorLevel(event.metadata().level()),
-            Color::Black.paint("|:")
+            "|:".black()
         )?;
         let normalized_meta = event.normalized_metadata();
         let event_meta = normalized_meta.as_ref().unwrap_or_else(|| event.metadata());
-        write!(writer, "{}", Color::Fixed(8).prefix())?;
         if std::path::Path::new(event_meta.file().unwrap_or("/")).is_relative() {
             write!(
                 writer,
@@ -260,8 +252,7 @@ where
         }
 
         write!(writer, "{} ", event_meta.target())?;
-        write!(writer, "{}", Color::Fixed(8).suffix())?;
-        write!(writer, "{} ", Color::Fixed(250).paint("|:"))?;
+        write!(writer, "{} ", "|:")?;
         let full_ctx = FullCtx::new(ctx, event.parent());
         write!(writer, "{}\n└─\t", full_ctx)?;
         let mut fields = EventFieldVisitor {
@@ -293,12 +284,7 @@ pub fn build_logger() -> Result<(), anyhow::Error> {
         .add_directive("reqwest=info".parse()?)
         .add_directive("mio=off".parse()?);
     let field_formatter = tracing_subscriber::fmt::format::debug_fn(|writer, field, value| {
-        write!(
-            writer,
-            "{}: {:?}",
-            Color::Yellow.dimmed().paint(field.name()),
-            value
-        )
+        write!(writer, "{}: {:?}", field.name().yellow().dimmed(), value)
     })
     // Use the `tracing_subscriber::MakeFmtExt` trait to wrap the
     // formatter so that a delimiter is added between fields.

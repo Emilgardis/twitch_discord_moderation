@@ -15,7 +15,7 @@ pub struct Subscriber {
 }
 
 pub async fn make_token<'a>(
-    client: &'a impl twitch_oauth2::client::Client<'a>,
+    client: &'a impl twitch_oauth2::client::Client,
     token: impl Into<twitch_oauth2::AccessToken>,
 ) -> Result<UserToken, anyhow::Error> {
     UserToken::from_existing(client, token.into(), None, None)
@@ -230,10 +230,11 @@ impl Subscriber {
     ) -> Result<async_tungstenite::WebSocketStream<tokio_at::ConnectStream>, anyhow::Error> {
         tracing::info!("connecting to twitch");
         let config = async_tungstenite::tungstenite::protocol::WebSocketConfig {
-            max_send_queue: None,
+            max_write_buffer_size: 2048,
             max_message_size: Some(64 << 20), // 64 MiB
             max_frame_size: Some(16 << 20),   // 16 MiB
             accept_unmasked_frames: false,
+            ..async_tungstenite::tungstenite::protocol::WebSocketConfig::default()
         };
         let (socket, _) = tokio_at::connect_async_with_config(url::Url::parse(url)?, Some(config))
             .await
@@ -276,9 +277,9 @@ impl Subscriber {
         }
         .into_topic();
         // if scopes doesn't contain required scope, then bail
-        if !<twitch_api::pubsub::moderation::ChatModeratorActions as twitch_api::pubsub::Topic>::SCOPE.iter().all(|s| self.access_token.scopes().contains(s)) {
+        if !<twitch_api::pubsub::moderation::ChatModeratorActions as twitch_api::pubsub::Topic>::SCOPE.matches(self.access_token.scopes()) {
             tracing::info!("token has scopes: {:?}", self.access_token.scopes());
-            anyhow::bail!("access token does not have valid scopes, required scope(s): {:?}", <twitch_api::pubsub::moderation::ChatModeratorActions as twitch_api::pubsub::Topic>::SCOPE.iter().map(|s| s.to_string()).collect::<Vec<_>>());
+            anyhow::bail!("access token does not have valid scopes, required scope(s): {:?}", <twitch_api::pubsub::moderation::ChatModeratorActions as twitch_api::pubsub::Topic>::SCOPE);
         }
         tracing::info!("sending pubsub subscription topics to listen to");
         s.send(Message::text(twitch_api::pubsub::listen_command(
