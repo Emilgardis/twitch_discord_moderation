@@ -34,7 +34,7 @@ fn main() -> xshell::Result<()> {
 
         let version = cmd!(sh, "cargo pkgid")
             .read()?
-            .rsplit_once('@')
+            .rsplit_once('#')
             .unwrap()
             .1
             .trim()
