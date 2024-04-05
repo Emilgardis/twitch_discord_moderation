@@ -1,5 +1,5 @@
 # syntax = docker/dockerfile:1.2
-FROM lukemathwalker/cargo-chef:latest-rust-1.74-alpine3.16 as chef
+FROM lukemathwalker/cargo-chef:latest-rust-1.74-alpine3.17 as chef
 WORKDIR /app
 ARG BUILD_DEPS
 RUN apk add --no-cache ${BUILD_DEPS}
@@ -20,7 +20,7 @@ COPY . .
 RUN --mount=type=cache,target=$CARGO_HOME/git \
     --mount=type=cache,target=$CARGO_HOME/registry \
     cargo -V; cargo build --release --bin twitch-discord-moderation && mv /app/target/release/twitch-discord-moderation /app/twitch-discord-moderation
-FROM alpine:3.15 as runtime
+FROM alpine:3.17 as runtime
 WORKDIR /app
 ARG RUN_DEPS
 RUN apk add --no-cache \

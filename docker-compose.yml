@@ -4,6 +4,6 @@ services:
   twitch-discord-moderation:
     image: emilgardis/twitch-discord-moderation:latest
     env_file: .env
-    environment: 
+    environment:
       RUST_LOG: "info"
     restart: "unless-stopped"
