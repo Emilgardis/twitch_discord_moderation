@@ -14,8 +14,8 @@ pub struct Subscriber {
     pub pubsub_channel: sync::broadcast::Sender<twitch_api::pubsub::Response>,
 }
 
-pub async fn make_token<'a>(
-    client: &'a impl twitch_oauth2::client::Client,
+pub async fn make_token(
+    client: &impl twitch_oauth2::client::Client,
     token: impl Into<twitch_oauth2::AccessToken>,
 ) -> Result<UserToken, anyhow::Error> {
     UserToken::from_existing(client, token.into(), None, None)
@@ -260,7 +260,6 @@ impl Subscriber {
                 self.access_token = get_access_token(&reqwest::Client::default(), opts)
                     .await
                     .context("when getting access token")?;
-            } else {
             }
         }
         let topic = twitch_api::pubsub::moderation::ChatModeratorActions {

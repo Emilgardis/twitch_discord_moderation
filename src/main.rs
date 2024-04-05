@@ -102,7 +102,7 @@ async fn main() {
     let opts = Opts::parse();
     tracing::info!(
         "App started!\n{}",
-        Opts::try_parse_from(&["app", "--version"])
+        Opts::try_parse_from(["app", "--version"])
             .unwrap_err()
             .to_string()
     );

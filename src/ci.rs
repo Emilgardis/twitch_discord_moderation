@@ -30,7 +30,7 @@ fn assert_lines_contains<'a>(iter: impl Iterator<Item = &'a str>, items: &[&str]
 
 #[test]
 fn readme_help_usage() {
-    let opts = crate::Opts::try_parse_from(&["twitch-discord-moderation", "--help"]);
+    let opts = crate::Opts::try_parse_from(["twitch-discord-moderation", "--help"]);
     let mut usage_help = String::new();
     write!(usage_help, "```text\n{}\n```\n", opts.unwrap_err()).unwrap();
     usage_help = usage_help

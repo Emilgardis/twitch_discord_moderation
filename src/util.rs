@@ -252,7 +252,7 @@ where
         }
 
         write!(writer, "{} ", event_meta.target())?;
-        write!(writer, "{} ", "|:")?;
+        write!(writer, "|: ")?;
         let full_ctx = FullCtx::new(ctx, event.parent());
         write!(writer, "{}\n└─\t", full_ctx)?;
         let mut fields = EventFieldVisitor {
