@@ -10,6 +10,7 @@ description = "Bot to send twitch moderator actions to a discord webhook"
 publish = false
 repository = "https://github.com/Emilgardis/twitch_discord_moderation"
 build = "build.rs"
+rust-version = "1.74"
 
 [dependencies]
 tokio = { version = "1.21.2", features = ["full"] }
@@ -25,7 +26,11 @@ anyhow = "1.0.66"
 chrono = "0.4.22"
 owo-colors = "4"
 dotenvy = "0.15.7"
-twitch_api = { git = "https://github.com/twitch-rs/twitch_api.git", features = ["reqwest", "helix", "pubsub"] }
+twitch_api = { git = "https://github.com/twitch-rs/twitch_api.git", features = [
+    "reqwest",
+    "helix",
+    "pubsub",
+] }
 async-tungstenite = { version = "0.25.1", features = ["tokio-native-tls"] }
 reqwest = { version = "0.12.2", features = ["json"] }
 url = "2.3.1"
