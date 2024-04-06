@@ -230,7 +230,7 @@ impl Subscriber {
     ) -> Result<async_tungstenite::WebSocketStream<tokio_at::ConnectStream>, anyhow::Error> {
         tracing::info!("connecting to twitch");
         let config = async_tungstenite::tungstenite::protocol::WebSocketConfig {
-            max_write_buffer_size: 2048,
+            max_write_buffer_size: 256 * 1024,
             max_message_size: Some(64 << 20), // 64 MiB
             max_frame_size: Some(16 << 20),   // 16 MiB
             accept_unmasked_frames: false,
