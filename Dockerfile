@@ -1,5 +1,5 @@
 # syntax = docker/dockerfile:1.2
-FROM lukemathwalker/cargo-chef:latest-rust-1.74-alpine3.17 as chef
+FROM lukemathwalker/cargo-chef:latest-rust-1.76-alpine3.17 as chef
 WORKDIR /app
 ARG BUILD_DEPS
 RUN apk add --no-cache ${BUILD_DEPS}
