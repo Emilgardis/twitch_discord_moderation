@@ -1,6 +1,6 @@
 [package]
 name = "twitch-discord-moderation"
-version = "0.5.1"
+version = "0.5.2"
 authors = ["Emil Gardström <emil.gardstrom@gmail.com>"]
 edition = "2021"
 license = "MIT OR APACHE-2.0"
@@ -10,7 +10,7 @@ description = "Bot to send twitch moderator actions to a discord webhook"
 publish = false
 repository = "https://github.com/Emilgardis/twitch_discord_moderation"
 build = "build.rs"
-rust-version = "1.76"
+rust-version = "1.77"
 
 [dependencies]
 tokio = { version = "1.21.2", features = ["full"] }

@@ -1817,7 +1817,7 @@ dependencies = [
 
 [[package]]
 name = "twitch-discord-moderation"
-version = "0.5.1"
+version = "0.5.2"
 dependencies = [
  "anyhow",
  "async-tungstenite",
