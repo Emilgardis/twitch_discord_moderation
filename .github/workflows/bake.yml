@@ -57,8 +57,8 @@ jobs:
         uses: snok/container-retention-policy@v2
         with:
           image-names: ${{ env.IMAGE_NAME }}
-          cut-off: One day ago UTC
-          keep-at-least: 2
+          cut-off: One year ago UTC
+          keep-at-least: 20
           account-type: personal
           filter-tags: sha-*
           skip-tags: edge,main,v*
