@@ -205,6 +205,11 @@ impl Subscriber {
                                         }
                                         Err(e) => {
                                             tracing::warn!(error=?e, "Got unhandled pubsub message.");
+                                            let mut e: &dyn std::error::Error = &*e;
+                                            while let Some(err) = e.source() {
+                                                tracing::warn!(error=err);
+                                                e = err;
+                                            }
                                         }
                                     }
 
