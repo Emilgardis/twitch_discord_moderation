@@ -61,14 +61,14 @@ pub struct Opts {
     pub channel_bot_name: Option<String>,
 }
 
-pub fn is_token(s: &str) -> anyhow::Result<()> {
+pub fn is_token(s: &str) -> anyhow::Result<Secret> {
     if s.starts_with("oauth:") {
         anyhow::bail!("token should not have `oauth:` as a prefix")
     }
     if s.len() != 30 {
         anyhow::bail!("token needs to be 30 characters long")
     }
-    Ok(())
+    Ok(Secret(s.to_owned()))
 }
 
 #[derive(Clone)]
