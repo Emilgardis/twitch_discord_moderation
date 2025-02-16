@@ -4,7 +4,7 @@ pub mod subscriber;
 pub mod util;
 pub mod webhook;
 
-use anyhow::Context;
+use eyre::WrapErr;
 use clap::{builder::ArgPredicate, ArgGroup, Parser};
 
 #[derive(Parser, Debug)]
@@ -61,12 +61,12 @@ pub struct Opts {
     pub channel_bot_name: Option<String>,
 }
 
-pub fn is_token(s: &str) -> anyhow::Result<Secret> {
+pub fn is_token(s: &str) -> eyre::Result<Secret> {
     if s.starts_with("oauth:") {
-        anyhow::bail!("token should not have `oauth:` as a prefix")
+        eyre::bail!("token should not have `oauth:` as a prefix")
     }
     if s.len() != 30 {
-        anyhow::bail!("token needs to be 30 characters long")
+        eyre::bail!("token needs to be 30 characters long")
     }
     Ok(Secret(s.to_owned()))
 }
@@ -111,18 +111,18 @@ async fn main() {
         Ok(_) => {}
         Err(err) => {
             tracing::error!(Error = %err, "Could not handle message");
-            for err in <anyhow::Error>::chain(&err).skip(1) {
+            for err in <eyre::Report>::chain(&err).skip(1) {
                 tracing::error!(Error = %err, "Caused by");
             }
         }
     }
 }
 
-pub async fn run(opts: &Opts) -> anyhow::Result<()> {
+pub async fn run(opts: &Opts) -> eyre::Result<()> {
     let subscriber = subscriber::Subscriber::new(opts)
         .await
         .context("when constructing subscriber")?;
-    let recv = subscriber.pubsub_channel.subscribe();
+    let recv = subscriber.channel.subscribe();
     let webhook = webhook::Webhook::new(subscriber.channel_login.clone(), opts);
     tracing::debug!("entering main block");
     tokio::select!(
@@ -131,7 +131,7 @@ pub async fn run(opts: &Opts) -> anyhow::Result<()> {
         if r.is_err() {
             r.with_context(|| "subscriber returned with error to panic on")?
         } else {
-            anyhow::bail!("subscriber returned early when it should not have")
+            eyre::bail!("subscriber returned early when it should not have")
         }
     },
     r = webhook.run(recv) => {
@@ -139,7 +139,7 @@ pub async fn run(opts: &Opts) -> anyhow::Result<()> {
         if r.is_err() {
             r.with_context(|| "webhook returned with error to panic on")?
         } else {
-            anyhow::bail!("webhook returned early when it should not have")
+            eyre::bail!("webhook returned early when it should not have")
         }
     });
     Ok(())

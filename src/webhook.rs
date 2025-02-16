@@ -1,6 +1,9 @@
 use crate::util::Sanitize;
 use tokio::sync;
-use twitch_api::{pubsub::moderation, types};
+use twitch_api::{
+    eventsub::channel::moderate::{self, ActionV2},
+    types,
+};
 pub struct Webhook {
     webhook: discord_webhook::Webhook,
     channel_login: types::UserName,
@@ -11,7 +14,8 @@ impl Webhook {
     fn add_streamcardlink(&self, user_login: &str) -> String {
         format!(
             "[{1}](<https://www.twitch.tv/popout/{0}/viewercard/{1}?popout=>)",
-            self.channel_login, user_login
+            self.channel_login.sanitize(),
+            user_login
         )
     }
 
@@ -26,42 +30,15 @@ impl Webhook {
     #[tracing::instrument(name = "webhook", skip(self, recv))]
     pub async fn run(
         self,
-        mut recv: sync::broadcast::Receiver<twitch_api::pubsub::Response>,
-    ) -> Result<(), anyhow::Error> {
+        mut recv: sync::broadcast::Receiver<crate::subscriber::Events>,
+    ) -> Result<(), eyre::Report> {
         while let Ok(msg) = recv.recv().await {
+            tracing::info!("Received event {:?}", msg);
             match msg {
-                twitch_api::pubsub::Response::Response(r) => {
-                    if !r.is_successful() {
-                        anyhow::bail!(
-                            "pubsub returned an error {}",
-                            r.error.as_deref().unwrap_or("")
-                        );
-                    }
-                    match r.nonce.as_deref() {
-                        Some(crate::subscriber::MOD_NONCE) => {
-                            tracing::info!("Listening to moderator actions")
-                        }
-                        _ => {
-                            tracing::warn!(message = ?r, "Twitch responded with an unexpected message")
-                        }
-                    }
+                crate::subscriber::Events::ChannelModerateV2(p, t) => {
+                    self.post_moderator_action(p.action, p.moderator_user_login, t)
+                        .await?
                 }
-                twitch_api::pubsub::Response::Message { data } => match data {
-                    twitch_api::pubsub::TopicData::ChatModeratorActions { reply, .. } => {
-                        tracing::info!(moderation_action = ?reply, "got mod action");
-                        self.post_moderator_action(*reply).await?;
-                    }
-                    message => {
-                        tracing::warn!("got unknown message: {:?}", message)
-                    }
-                },
-                twitch_api::pubsub::Response::Pong => {
-                    tracing::trace!("PONG from twitch")
-                }
-                twitch_api::pubsub::Response::Reconnect => {
-                    tracing::error!("Twitch needs to reconnect")
-                }
-                _ => {}
             }
         }
         Ok(())
@@ -70,183 +47,284 @@ impl Webhook {
     #[tracing::instrument(skip(self))]
     pub async fn post_moderator_action(
         &self,
-        action: moderation::ChatModeratorActionsReply,
-    ) -> Result<(), anyhow::Error> {
-        use twitch_api::pubsub::moderation::ModerationActionCommand;
+        action: ActionV2,
+        moderator: types::UserName,
+        timestamp: types::Timestamp,
+    ) -> Result<(), eyre::Report> {
+        let mut message = None;
+        let done_by = format!("{}@twitch", moderator,);
         match action {
-            moderation::ChatModeratorActionsReply::ModerationAction(
-                moderation::ModerationAction {
-                    args,
-                    created_by,
-                    moderation_action,
-                    target_user_id,
-                    ..
-                },
-            ) => {
-                let bot_name = self
-                    .channel_bot_name
-                    .clone()
-                    .map(|s| s.as_str().to_lowercase());
-                let mut created_by_bot = false;
-                let real_created_by = match (created_by, bot_name) {
-                    (Some(created_by), Some(bot_specified_name))
-                        if created_by.as_str() == bot_specified_name.to_lowercase() =>
-                    {
-                        match args
-                            .iter()
-                            .last()
-                            .map_or("", |s| s.as_str())
-                            .split(' ')
-                            .collect::<Vec<_>>()
-                            .as_slice()
-                        {
-                            [.., "by", user] => {
-                                created_by_bot =
-                                    moderation_action != ModerationActionCommand::Delete;
-                                user.to_string()
-                            }
-                            _ => bot_specified_name,
-                        }
-                    }
-                    (Some(other), _) => other.to_string(),
-                    (None, _) => "<unknown>".to_string(),
+            // translation of the old commented code to more modern code and using eventsub instead of pubsub
+            ActionV2::Delete(moderate::Delete {
+                user_id,
+                user_login,
+                message_body,
+                ..
+            }) => {
+                message = Some(format!(
+                        "❌_Twitch Moderation_ |\n*{moderator}*: /delete {usercard} ||{message_body}||\n*{usercard}:{user_id}* message deleted",
+                        usercard = self.add_streamcardlink(user_login.as_str()),
+                        message_body = message_body.sanitize(),
+                    ));
+            }
+            ActionV2::Timeout(moderate::Timeout {
+                user_id,
+                user_login,
+                expires_at,
+                reason,
+                ..
+            }) => {
+                // eventsub gives expires_at as a timestamp, so we need to calculate the duration
+                message = Some(format!(
+                        "🔨_Twitch Moderation_ |\n*{moderator}*: /timeout {usercard}\n*{usercard}:{user_id}* has been timed out until <t:{expires}>{reason}",
+                        usercard = self.add_streamcardlink(user_login.as_str()),
+                        expires = expires_at.to_utc().unix_timestamp(),
+                        reason = if let Some(reason) = reason {
+                            format!("\nreason: {}", reason.sanitize())
+                        } else {
+                            "".to_string()
+                        },
+                    ));
+            }
+            ActionV2::Untimeout(moderate::Untimeout {
+                user_id,
+                user_login,
+                ..
+            }) => {
+                message = Some(format!(
+                        "🔨_Twitch Moderation_ |\n*{moderator}*: /untimeout {usercard}\n*{usercard}:{user_id}* is no longer timed out",
+                        usercard = self.add_streamcardlink(user_login.as_str()),
+                    ));
+            }
+            ActionV2::Ban(moderate::Ban {
+                user_id,
+                user_login,
+                reason,
+                ..
+            }) => {
+                message = Some(format!(
+                        "🏝️_Twitch Moderation_ |\n*{moderator}*: /ban {usercard}\n*{usercard}:{user_id}* is now banned{reason}",
+                        usercard = self.add_streamcardlink(user_login.as_str()),
+                        reason = if let Some(reason) = reason {
+                            format!("\nreason: {}", reason.sanitize())
+                        } else {
+                            "".to_string()
+                        },
+                    ));
+            }
+            ActionV2::Unban(moderate::Unban {
+                user_id,
+                user_login,
+                ..
+            }) => {
+                message = Some(format!(
+                        "🏝️_Twitch Moderation_ |\n*{moderator}*: /unban {usercard}\n*{usercard}:{user_id}* is no longer banned",
+                        usercard = self.add_streamcardlink(user_login.as_str()),
+                    ));
+            }
+            ActionV2::Followers(moderate::Followers {
+                follow_duration_minutes,
+                ..
+            }) => {
+                message = Some(format!(
+                        "🔒_Twitch Moderation_ |\n*{moderator}*: /followers {follow_duration_minutes}m\nFollowers-only mode is now enabled for {follow_duration_minutes} minutes",
+                    ));
+            }
+            ActionV2::Slow(moderate::Slow {
+                wait_time_seconds, ..
+            }) => {
+                message = Some(format!(
+                        "🔒_Twitch Moderation_ |\n*{moderator}*: /slow {wait_time_seconds}s\nSlow mode is now enabled with {wait_time_seconds} seconds",
+                    ));
+            }
+            ActionV2::Vip(moderate::Vip {
+                user_id,
+                user_login,
+                user_name,
+                ..
+            }) => {
+                message = Some(format!(
+                        "🔨_Twitch Moderation_ |\n*{moderator}*: /vip {usercard}\n*{usercard}:{user_id}* is now a VIP",
+                        usercard = self.add_streamcardlink(user_login.as_str()),
+                    ));
+            }
+            ActionV2::Unvip(moderate::Unvip {
+                user_id,
+                user_login,
+                user_name,
+                ..
+            }) => {
+                message = Some(format!(
+                        "🔨_Twitch Moderation_ |\n*{moderator}*: /unvip {usercard}\n*{usercard}:{user_id}* is no longer a VIP",
+                        usercard = self.add_streamcardlink(user_login.as_str()),
+                    ));
+            }
+            ActionV2::Mod(moderate::Mod {
+                user_id,
+                user_login,
+                user_name,
+                ..
+            }) => {
+                message = Some(format!(
+                        "🔨_Twitch Moderation_ |\n*{moderator}*: /mod {usercard}\n*{usercard}:{user_id}* is now a moderator",
+                        usercard = self.add_streamcardlink(user_login.as_str()),
+                    ));
+            }
+            ActionV2::Unmod(moderate::Unmod {
+                user_id,
+                user_login,
+                user_name,
+                ..
+            }) => {
+                message = Some(format!(
+                        "🔨_Twitch Moderation_ |\n*{moderator}*: /unmod {usercard}\n*{usercard}:{user_id}* is no longer a moderator",
+                        usercard = self.add_streamcardlink(user_login.as_str()),
+                    ));
+            }
+            ActionV2::Raid(moderate::Raid {
+                user_id,
+                user_login,
+                user_name,
+                viewer_count,
+                ..
+            }) => {
+                message = Some(format!(
+                        "🔨_Twitch Moderation_ |\n*{moderator}*: /raid {usercard} {viewer_count}\n*{usercard}:{user_id}* is now being raided",
+                        usercard = self.add_streamcardlink(user_login.as_str()),
+                    ));
+            }
+            ActionV2::Unraid(moderate::Unraid {
+                user_id,
+                user_login,
+                user_name,
+                ..
+            }) => {
+                message = Some(format!(
+                        "🔨_Twitch Moderation_ |\n*{moderator}*: /unraid {usercard}\n*{usercard}:{user_id}* raid was canceled",
+                        usercard = self.add_streamcardlink(user_login.as_str()),
+                    ));
+            }
+            ActionV2::ApproveUnbanRequest(moderate::UnbanRequest {
+                is_approved,
+                user_id,
+                user_login,
+                user_name,
+                moderator_message,
+                ..
+            }) => {
+                message = Some(format!(
+                    "🔨_Twitch Moderation_ |\n*{moderator}*: /approve {usercard} : {moderator_message}\n*{usercard}:{user_id}* unban was approved",
+                    usercard = self.add_streamcardlink(user_login.as_str()),
+                    moderator_message = moderator_message.sanitize(),
+                ));
+            }
+            ActionV2::DenyUnbanRequest(moderate::UnbanRequest {
+                is_approved,
+                user_id,
+                user_login,
+                user_name,
+                moderator_message,
+                ..
+            }) => {
+                message = Some(format!(
+                    "🔨_Twitch Moderation_ |\n*{moderator}*: /deny {usercard} : {moderator_message}\n*{usercard}:{user_id}* unban was denied",
+                    usercard = self.add_streamcardlink(user_login.as_str()),
+                    moderator_message = moderator_message.sanitize(),
+                ));
+            }
+            ActionV2::SharedChatBan(moderate::SharedChatBan(_))
+            | ActionV2::SharedChatUnban(moderate::SharedChatUnban(_))
+            | ActionV2::SharedChatTimeout(moderate::SharedChatTimeout(_))
+            | ActionV2::SharedChatUntimeout(moderate::SharedChatUntimeout(_))
+            | ActionV2::SharedChatDelete(moderate::SharedChatDelete(_)) => {
+                // NOP
+            },
+            ActionV2::EmoteOnly => message = Some("🔒_Twitch Moderation_ |\n*{moderator}*: /emoteonly\nEmote-only mode is now enabled".to_string()),
+            ActionV2::EmoteOnlyOff => message = Some("🔒_Twitch Moderation_ |\n*{moderator}*: /emoteonlyoff\nEmote-only mode is now disabled".to_string()),
+            ActionV2::FollowersOff => message = Some("🔒_Twitch Moderation_ |\n*{moderator}*: /followersoff\nFollowers-only mode is now disabled".to_string()),
+            ActionV2::Uniquechat => message = Some("🔒_Twitch Moderation_ |\n*{moderator}*: /uniquechat\nUnique chat is now enabled".to_string()),
+            ActionV2::UniquechatOff => message = Some("🔒_Twitch Moderation_ |\n*{moderator}*: /uniquechatoff\nUnique chat is now disabled".to_string()),
+            ActionV2::SlowOff => message = Some("🔒_Twitch Moderation_ |\n*{moderator}*: /slowoff\nSlow mode is now disabled".to_string()),
+            ActionV2::Subscribers => message = Some("🔒_Twitch Moderation_ |\n*{moderator}*: /subscribers\nSubscribers-only mode is now enabled".to_string()),
+            ActionV2::SubscribersOff => message = Some("🔒_Twitch Moderation_ |\n*{moderator}*: /subscribersoff\nSubscribers-only mode is now disabled".to_string()),
+            ActionV2::AddBlockedTerm(terms)
+            | ActionV2::AddPermittedTerm(terms)
+            | ActionV2::RemoveBlockedTerm(terms)
+            | ActionV2::RemovePermittedTerm(terms) => {
+                // either add or remove
+                let action = match (terms.action, terms.from_automod, terms.list) {
+                    (moderate::AutomodTermAction::Add, true, moderate::AutomodTermList::Blocked) => "temp_term_add_block".to_owned(),
+                    (moderate::AutomodTermAction::Add, true, moderate::AutomodTermList::Permitted) => "temp_term_add_permit".to_owned(),
+                    (moderate::AutomodTermAction::Add, false, moderate::AutomodTermList::Blocked) => "term_add_block".to_owned(),
+                    (moderate::AutomodTermAction::Add, false, moderate::AutomodTermList::Permitted) => "term_add_permit".to_owned(),
+                    (moderate::AutomodTermAction::Remove, true, moderate::AutomodTermList::Blocked) => "temp_term_remove_block".to_owned(),
+                    (moderate::AutomodTermAction::Remove, true, moderate::AutomodTermList::Permitted) => "temp_term_remove_permit".to_owned(),
+                    (moderate::AutomodTermAction::Remove, false, moderate::AutomodTermList::Blocked) => "term_remove_block".to_owned(),
+                    (moderate::AutomodTermAction::Remove, false, moderate::AutomodTermList::Permitted) => "term_remove_permit".to_owned(),
+                    (a, from_automod, list) => format!("unknown_{a:?}_{from_automod}_{list:?}",),
                 };
+                message = Some(format!(
+                    "🔨_Twitch Moderation_ |\n*{moderator}*: /{action} {terms}\nTerms {action}ed{temp}: {terms}",
+                    action = action,
+                    temp = if terms.from_automod { " temporarily" } else { "" },
+                    terms = terms.terms.join(", "),
+                ));
 
-                self.webhook.send(|message| {
-                    message.content(&match &moderation_action {
-                        ModerationActionCommand::Delete =>  { format!("❌_Twitch Moderation_ |\n*{0}*: /delete {1} ||{2}||\n*{1}:{3}* message deleted",
-                            real_created_by.sanitize(), // Not real created by, since delete doesn't carry that information
-                            self.add_streamcardlink(args.first().map_or("<unknown>", |u| u)),
-                            args[1..args.len().checked_sub(1).unwrap_or(1)].join(" ").sanitize(),
-                            target_user_id.sanitize(),
-                        )},
-                        ModerationActionCommand::Timeout => format!("🔨_Twitch Moderation_ |\n*{0}*: /timeout {1}\n*{2}:{3}* has been timed out for {4}",
-                            real_created_by.sanitize(),
-                            args.join(" ").sanitize(),
-                            self.add_streamcardlink(args.first().map_or("<unknown>", |u| u)),
-                            target_user_id.sanitize(),
-                            args.get(1).map_or(String::from("<unknown>"), |u|
-                                humantime::format_duration(std::time::Duration::new(u.parse().unwrap_or(0),0)).to_string()
-                            ),
-                        ),
-                        ModerationActionCommand::Untimeout => format!("🔨_Twitch Moderation_ |\n*{0}*: /unban {1}\n*{1}:{2}* is no longer timed out",
-                            real_created_by.sanitize(),
-                            self.add_streamcardlink(args.first().map_or("<unknown>", |u| u)),
-                            target_user_id.sanitize(),
-                        ),
-                        ModerationActionCommand::Ban  => format!("🏝️_Twitch Moderation_ |\n*{0}*: /ban {1}\n*{2}:{3}* is now banned",
-                            real_created_by.sanitize(),
-                            args.join(" ").sanitize(),
-                            self.add_streamcardlink(args.first().map_or("<unknown>", |u| u)),
-                            target_user_id.sanitize(),
-                        ),
-                        ModerationActionCommand::Unban => format!("🏝️_Twitch Moderation_ |\n*{0}*: /unban {1}\n*{2}:{3}* is no longer banned",
-                            real_created_by.sanitize(),
-                            args.join(" ").sanitize(),
-                            self.add_streamcardlink(args.first().map_or("<unknown>", |u| u)),
-                            target_user_id.sanitize(),
-                        ),
-                        | moderation::ModerationActionCommand::ModifiedAutomodProperties
-                        | moderation::ModerationActionCommand::AutomodRejected
-                        | moderation::ModerationActionCommand::ApproveAutomodMessage
-                        | moderation::ModerationActionCommand::DeniedAutomodMessage => format!("👀_Twitch Moderation_ |\n*{0}*: /{1} ||{2}||", real_created_by, moderation_action, args.join(" ")),
-                        _ => format!("👀_Twitch Moderation_ |\n*{0}*: /{1} {2}", real_created_by.sanitize(), moderation_action, args.join(" ").sanitize()),
-
-                    });
-                    // .tts(false)
-                    if created_by_bot {
-                        message.username(&format!("{}@twitch via {}", real_created_by, self.channel_bot_name.clone().unwrap_or_else(|| types::DisplayName::from("<bot>"))))
-                    } else {
-                        message.username(&format!("{}@twitch", real_created_by))
-                    }
-                    // .embed(|embed| embed
-                    //     .title()
-                    //     .color(0xffc0cb)
-                    //     .field("args", &format!("{:?}",args), true)
-                    // )
-                } ).await.map_err(|e| anyhow::anyhow!("{}", e.to_string()))?;
             }
-
-            moderation::ChatModeratorActionsReply::DenyUnbanRequest(unban_request)
-            | moderation::ChatModeratorActionsReply::ApproveUnbanRequest(unban_request) => {
+            ActionV2::Warn(moderate::Warn {
+                user_id,
+                user_login,
+                user_name,
+                reason,
+                chat_rules_cited, // Option<Vec<String>>,
+                ..
+            }) => {
+                message = Some(format!(
+                        "🔨_Twitch Moderation_ |\n*{moderator}*: /warn {usercard}\n*{usercard}:{user_id}* has been warned{chat_rules_cited}{reason}",
+                        usercard = self.add_streamcardlink(user_login.as_str()),
+                        chat_rules_cited = if let Some(rules) = chat_rules_cited {
+                            format!(" for breaking rules: {}", rules.join(", "))
+                        } else {
+                            "".to_string()
+                        },
+                        reason = if let Some(reason) = reason {
+                            format!("\nreason: {}", reason.sanitize())
+                        } else {
+                            "".to_string()
+                        },
+                    ));
+            },
+            ActionV2::DenyUnbanRequest(unban_request)
+            | ActionV2::ApproveUnbanRequest(unban_request) => {
                 self.webhook
                     .send(|message| {
+                        let action = if unban_request.is_approved {
+                            "APPROVED"
+                        } else {
+                            "DENIED"
+                        };
                         message.content(&format!(
-                            "🔨_Twitch Moderation_ |\n*{0}*: /{1} {2} : {3}",
-                            unban_request.created_by_login.sanitize(),
-                            unban_request.moderation_action,
-                            unban_request.target_user_login.sanitize(),
-                            unban_request.moderator_message.sanitize()
+                            "🔨_Twitch Moderation_ |\n*{moderator}*: /{action} {target} : {moderator_message}",
+                            target = unban_request.user_login,
+                            moderator_message = unban_request.moderator_message.sanitize()
                         ))
                     })
                     .await
-                    .map_err(|e| anyhow::anyhow!("{}", e.to_string()))?;
+                    .map_err(|e| eyre::eyre!(e.to_string()))?;
             }
-            moderation::ChatModeratorActionsReply::VipAdded(vip_added) => {
-                self.webhook
-                    .send(|message| {
-                        message.content(&format!(
-                            "👀_Twitch Moderation_ |\n*{0}*: /{1} {2}",
-                            vip_added.created_by.sanitize(),
-                            "vip",
-                            vip_added.target_user_login.sanitize(),
-                        ))
-                    })
-                    .await
-                    .map_err(|e| anyhow::anyhow!("{}", e.to_string()))?;
+            _ => {
+                tracing::warn!("Unknown action {:?}", action);
             }
-            moderation::ChatModeratorActionsReply::ChannelTermsAction(channel_term) => {
-                let msg = match channel_term.type_ {
-                    moderation::ChannelAction::AddPermittedTerm => {
-                        format!(
-                            "👀_Twitch Moderation_ |\n*{0}*: Added permitted term `{1}`",
-                            channel_term.requester_login.sanitize(),
-                            channel_term.text
-                        )
-                    }
-                    moderation::ChannelAction::DeletePermittedTerm => {
-                        format!(
-                            "👀_Twitch Moderation_ |\n*{0}*: Deleted permitted term `{1}`",
-                            channel_term.requester_login.sanitize(),
-                            channel_term.text
-                        )
-                    }
-                    moderation::ChannelAction::AddBlockedTerm => {
-                        format!(
-                            "👀_Twitch Moderation_ |\n*{0}*: Added blocked term ||`{1}`||",
-                            channel_term.requester_login.sanitize(),
-                            channel_term.text
-                        )
-                    }
-                    moderation::ChannelAction::DeleteBlockedTerm => {
-                        format!(
-                            "👀_Twitch Moderation_ |\n*{0}*: Deleted blocked term ||`{1}`||",
-                            channel_term.requester_login.sanitize(),
-                            channel_term.text
-                        )
-                    }
-                    _ => return Ok(()),
-                };
-                self.webhook
-                    .send(|message| message.content(&msg))
-                    .await
-                    .map_err(|e| anyhow::anyhow!("{}", e.to_string()))?;
-            }
-            moderation::ChatModeratorActionsReply::ModeratorAdded(moderator_added) => {
-                self.webhook
-                    .send(|message| {
-                        message.content(&format!(
-                            "👀_Twitch Moderation_ |\n*{0}*: Added `{1}` as moderator",
-                            moderator_added.created_by.sanitize(),
-                            moderator_added.target_user_login
-                        ))
-                    })
-                    .await
-                    .map_err(|e| anyhow::anyhow!("{}", e.to_string()))?;
-            }
-            _ => (),
         }
-
+        if let Some(text) = message {
+            self.webhook
+                .send(|message| {
+                    message.content(&text);
+                    message.username(&done_by)
+                })
+                .await
+                .map_err(|e| eyre::eyre!(e.to_string()))?;
+        }
         Ok(())
     }
 }

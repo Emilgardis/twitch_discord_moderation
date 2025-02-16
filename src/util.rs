@@ -8,7 +8,7 @@ use tracing_subscriber::{
 
 use tracing_log::NormalizeEvent;
 
-use anyhow::Context;
+use eyre::WrapErr;
 use fmt::{time::FormatTime, FormattedFields};
 use owo_colors::OwoColorize;
 use std::{borrow::Cow, fmt::Write};
@@ -268,18 +268,18 @@ where
 
 impl<S: Subscriber + for<'a> LookupSpan<'a>> tracing_subscriber::Layer<S> for Formatter {}
 /// Build a logger that does file and term logging.
-pub fn build_logger() -> Result<(), anyhow::Error> {
+pub fn build_logger() -> Result<(), eyre::Report> {
     use tracing_subscriber::prelude::__tracing_subscriber_field_MakeExt as _;
 
     tracing_log::log_tracer::Builder::new()
         .init()
-        .context("when building tracing builder")?;
+        .wrap_err("when building tracing builder")?;
     let filter = tracing_subscriber::EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info"))
         .add_directive("hyper=off".parse()?)
         .add_directive("sqlx=warn".parse()?)
         .add_directive("want=info".parse()?)
-        .add_directive("async_tungstenite=info".parse()?)
+        .add_directive("tokio_tungstenite=info".parse()?)
         .add_directive("tungstenite=info".parse()?)
         .add_directive("reqwest=info".parse()?)
         .add_directive("mio=off".parse()?);
@@ -297,6 +297,6 @@ pub fn build_logger() -> Result<(), anyhow::Error> {
         .fmt_fields(field_formatter)
         .finish();
     tracing::subscriber::set_global_default(subscriber)
-        .context("could not set global tracing logger")?;
+        .wrap_err("could not set global tracing logger")?;
     Ok(())
 }
