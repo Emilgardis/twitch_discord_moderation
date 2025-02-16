@@ -37,6 +37,122 @@ pub async fn make_token(
         .map_err(Into::into)
 }
 
+pub async fn get_dcf_token(
+    client: &reqwest::Client,
+    webhook: &discord_webhook::Webhook,
+    scopes: Vec<twitch_oauth2::Scope>,
+    client_id: twitch_oauth2::ClientId,
+    client_secret: Option<twitch_oauth2::ClientSecret>,
+    secret_path: std::path::PathBuf,
+) -> Result<UserToken, eyre::Report> {
+    // four things can happen.
+    // 1. the file doesn't exist, we ask for dcf then store token and refresh.
+    // 2. the file exists, but the token is expired (or about to expire), we refresh the token and store.
+    // 3. the file exists and the token is still valid, we use the token.
+    // 4. the file exists, but the token or data is invalid (e.g empty or corrupted), we ask for dcf then store token and refresh.
+
+    // UserToken does not implement serde::Deserialize.
+    #[derive(serde::Serialize, serde::Deserialize)]
+    struct StoredUserToken {
+        access_token: twitch_oauth2::AccessToken,
+        refresh_token: twitch_oauth2::RefreshToken,
+    }
+
+    let (access_token, refresh_token) = if let Ok(file) = std::fs::File::open(&secret_path) {
+        if let Ok(StoredUserToken {
+            access_token,
+            refresh_token,
+        }) = serde_json::from_reader(file)
+        {
+            (access_token, refresh_token)
+        } else {
+            // file is not correct
+            let token = do_dcf_flow(client, webhook, client_id.clone(), scopes.clone()).await?;
+            (token.access_token, token.refresh_token.unwrap())
+        }
+    } else {
+        // file doesn't exist
+        let token = do_dcf_flow(client, webhook, client_id.clone(), scopes.clone()).await?;
+        (token.access_token, token.refresh_token.unwrap())
+    };
+
+    // validate, refresh if needed, store
+    let mut token = match UserToken::from_existing(
+        client,
+        access_token,
+        Some(refresh_token.clone()),
+        client_secret.clone(),
+    )
+    .await
+    {
+        Ok(token) => token,
+        Err(e) => {
+            tracing::warn!("could not use stored token, trying to refresh: {}", e);
+            // data in file was invalid, try refresh;
+            match refresh_token
+                .refresh_token(client, &client_id, client_secret.as_ref())
+                .await
+            {
+                Ok((a, _, r)) => UserToken::from_existing(client, a, r, client_secret)
+                    .await
+                    .context("could not use access newly retrieved token")?,
+                Err(e) => {
+                    tracing::warn!("could not use stored refresh token, trying new dcf: {}", e);
+                    do_dcf_flow(client, webhook, client_id, scopes).await?
+                }
+            }
+        }
+    };
+
+    if token.expires_in() < std::time::Duration::from_secs(60) {
+        token.refresh_token(client).await?;
+    }
+    let file = std::fs::File::create(&secret_path)?;
+    serde_json::to_writer(
+        file,
+        &StoredUserToken {
+            access_token: token.access_token.clone(),
+            refresh_token: token.refresh_token.as_ref().unwrap().clone(),
+        },
+    )?;
+    Ok(token)
+}
+
+pub async fn do_dcf_flow(
+    client: &reqwest::Client,
+    webhook: &discord_webhook::Webhook,
+    client_id: twitch_oauth2::ClientId,
+    scopes: Vec<twitch_oauth2::Scope>,
+) -> Result<UserToken, eyre::Report> {
+    let mut builder = twitch_oauth2::DeviceUserTokenBuilder::new(client_id, scopes);
+    let response = builder.start(client).await?;
+    let url = &response.verification_uri;
+    let code = &response.user_code;
+    println!("Please visit {} and enter the code: {}", url, code);
+    tracing::info!("waiting for user to enter code at {}", url);
+    // send discord webhook if the user hasn't authorized in 30 seconds.
+    webhook
+        .send(|m| {
+            m.content(&format!(
+                "Please visit <{}> and enter the code: `{}` to authenticate `twitch_discord_moderation` with twitch!",
+                url, code
+            )).username("twitch_moderation")
+        })
+        .await
+        .map_err(|e| eyre::eyre!("{e}"))?;
+    tracing::info!("sent discord webhook");
+    tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+    let token = builder.wait_for_code(client, tokio::time::sleep).await?;
+    webhook
+        .send(|m| {
+            m.content("Successfully authenticated with twitch!")
+                .username("twitch_moderation")
+        })
+        .await
+        .map_err(|e| eyre::eyre!("{e}"))?;
+    Ok(token)
+}
+
 pub async fn get_access_token(
     client: &reqwest::Client,
     opts: &crate::Opts,
@@ -91,6 +207,30 @@ pub async fn get_access_token(
                 Err(e).with_context(|| format!("calling oauth service on `{}`", &oauth_service_url))
             }
         }
+    } else if let (Some(id), secret, Some(path)) = (
+        &opts.dcf_oauth_client_id,
+        &opts.dcf_oauth_client_secret,
+        &opts.dcf_secret_path,
+    ) {
+        let webhook = discord_webhook::Webhook::from_url("https://discord.com/api/webhooks/756613357879951472/O3Z9MFDdKYaEauWWRPRRrEHUg7n-zGrHjzwqZ2gIhN_qjWxBta4Dmj8Ne6XE688x1fgG");
+        get_dcf_token(
+            client,
+            &webhook,
+            vec![
+                twitch_oauth2::Scope::ModeratorReadBlockedTerms,
+                twitch_oauth2::Scope::ModeratorReadChatSettings,
+                twitch_oauth2::Scope::ModeratorReadUnbanRequests,
+                twitch_oauth2::Scope::ModeratorReadBannedUsers,
+                twitch_oauth2::Scope::ModeratorReadChatMessages,
+                twitch_oauth2::Scope::ModeratorReadModerators,
+                twitch_oauth2::Scope::ModeratorReadVips,
+                twitch_oauth2::Scope::ModeratorReadWarnings,
+            ],
+            id.clone(),
+            secret.clone(),
+            path.clone(),
+        )
+        .await
     } else {
         panic!("got empty vals for token cli group: {:?}", opts)
     }
@@ -333,6 +473,7 @@ impl WebsocketClient {
             if !subs.is_empty() {
                 continue;
             }
+            // if you update the scopes needed, make sure to update do_dcf_flow() as well
             let moderate = eventsub::channel::ChannelModerateV2::new(
                 broadcaster_id.clone(),
                 token_user_id.clone(),

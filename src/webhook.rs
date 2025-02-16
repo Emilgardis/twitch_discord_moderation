@@ -5,9 +5,9 @@ use twitch_api::{
     types,
 };
 pub struct Webhook {
-    webhook: discord_webhook::Webhook,
-    channel_login: types::UserName,
-    channel_bot_name: Option<types::DisplayName>,
+    pub webhook: discord_webhook::Webhook,
+    pub channel_login: types::UserName,
+    pub channel_bot_name: Option<types::DisplayName>,
 }
 
 impl Webhook {
@@ -239,14 +239,14 @@ impl Webhook {
             | ActionV2::SharedChatDelete(moderate::SharedChatDelete(_)) => {
                 // NOP
             },
-            ActionV2::EmoteOnly => message = Some("🔒_Twitch Moderation_ |\n*{moderator}*: /emoteonly\nEmote-only mode is now enabled".to_string()),
-            ActionV2::EmoteOnlyOff => message = Some("🔒_Twitch Moderation_ |\n*{moderator}*: /emoteonlyoff\nEmote-only mode is now disabled".to_string()),
-            ActionV2::FollowersOff => message = Some("🔒_Twitch Moderation_ |\n*{moderator}*: /followersoff\nFollowers-only mode is now disabled".to_string()),
-            ActionV2::Uniquechat => message = Some("🔒_Twitch Moderation_ |\n*{moderator}*: /uniquechat\nUnique chat is now enabled".to_string()),
-            ActionV2::UniquechatOff => message = Some("🔒_Twitch Moderation_ |\n*{moderator}*: /uniquechatoff\nUnique chat is now disabled".to_string()),
-            ActionV2::SlowOff => message = Some("🔒_Twitch Moderation_ |\n*{moderator}*: /slowoff\nSlow mode is now disabled".to_string()),
-            ActionV2::Subscribers => message = Some("🔒_Twitch Moderation_ |\n*{moderator}*: /subscribers\nSubscribers-only mode is now enabled".to_string()),
-            ActionV2::SubscribersOff => message = Some("🔒_Twitch Moderation_ |\n*{moderator}*: /subscribersoff\nSubscribers-only mode is now disabled".to_string()),
+            ActionV2::EmoteOnly => message = Some(format!("🔒_Twitch Moderation_ |\n*{moderator}*: /emoteonly\nEmote-only mode is now enabled")),
+            ActionV2::EmoteOnlyOff => message = Some(format!("🔒_Twitch Moderation_ |\n*{moderator}*: /emoteonlyoff\nEmote-only mode is now disabled")),
+            ActionV2::FollowersOff => message = Some(format!("🔒_Twitch Moderation_ |\n*{moderator}*: /followersoff\nFollowers-only mode is now disabled")),
+            ActionV2::Uniquechat => message = Some(format!("🔒_Twitch Moderation_ |\n*{moderator}*: /uniquechat\nUnique chat is now enabled")),
+            ActionV2::UniquechatOff => message = Some(format!("🔒_Twitch Moderation_ |\n*{moderator}*: /uniquechatoff\nUnique chat is now disabled")),
+            ActionV2::SlowOff => message = Some(format!("🔒_Twitch Moderation_ |\n*{moderator}*: /slowoff\nSlow mode is now disabled")),
+            ActionV2::Subscribers => message = Some(format!("🔒_Twitch Moderation_ |\n*{moderator}*: /subscribers\nSubscribers-only mode is now enabled")),
+            ActionV2::SubscribersOff => message = Some(format!("🔒_Twitch Moderation_ |\n*{moderator}*: /subscribersoff\nSubscribers-only mode is now disabled")),
             ActionV2::AddBlockedTerm(terms)
             | ActionV2::AddPermittedTerm(terms)
             | ActionV2::RemoveBlockedTerm(terms)

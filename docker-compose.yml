@@ -7,3 +7,5 @@ services:
     environment:
       RUST_LOG: "info"
     restart: "unless-stopped"
+    volumes:
+      - ./.dcf_secret:/app/.dcf_secret

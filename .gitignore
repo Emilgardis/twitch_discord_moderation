@@ -13,3 +13,4 @@ coverage_reports/
 /cargo-timing*.html
 **/.cargo
 .env
+.dcf_secret

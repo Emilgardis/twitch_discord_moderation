@@ -1,5 +1,4 @@
-Twitch Discord Moderation | Log mod actions with discord
-============================================
+# Twitch Discord Moderation | Log mod actions with discord
 
 Log moderator actions with a discord channel.
 
@@ -15,18 +14,28 @@ services:
     environment:
       RUST_LOG: "info"
     restart: "unless-stopped"
+    volumes:
+      - ./.dcf_secret:/app/.dcf_secret # only needed if you want to use DCF
 ```
 
-and the `.env`
+create an empty file called `.dcf_secret` (and make sure it's only readable by trusted users)
+
+and then create a `.env` file containing the following (make sure to replace `CHANNEL_LOGIN` or omit it to use the owner of the token):
 
 ```txt
-ACCESS_TOKEN=0123456789abcdefghijABCDEFGHIJ
+DCF_OAUTH_CLIENT_ID=ytf4qimvfnkm2egtyxi4ckm4bex49e # This is a client id created for this application. Feel free to use it.
 CHANNEL_LOGIN=justintv
 DISCORD_WEBHOOK=https://discordapp.com/api/webhooks/111111111111/aaaaaaaaaaaaaaa
 RUST_LOG=info
 ```
 
+With the above config, the bot will post a message to the webhook prompting a user to login with a link. Once authorized, the bot will monitor moderation actions on the specified channel `justintv` (if the user that authorized has permission to do that) and post them to the discord webhook.
+
+## Features
+
 This application also supports getting an oauth2 token from an external service on url. This service should return a token in a json body where the token string is in the field `access_token`, if not, specify the path with a pointer.
+
+## Commandline options
 
 <!--BEGIN commandline options-->
 ```text
@@ -60,6 +69,17 @@ Options:
 
       --oauth2-service-refresh <OAUTH2_SERVICE_REFRESH>
           Grab a new token from the OAuth2 service this many seconds before it actually expires. Default is 30 seconds
+
+      --dcf-oauth-client-id <DCF_OAUTH_CLIENT_ID>
+          Client id to get a token. Stores the token data in the path specified by `--dcf-secret` (client id and optional secret is not stored)
+
+      --dcf-oauth-client-secret <DCF_OAUTH_CLIENT_SECRET>
+          Client secret to get a token. Only needed for confidential applications
+
+      --dcf-secret-path <DCF_SECRET_PATH>
+          Path for storing DCF oauth
+
+          [default: ./.dcf_secret]
 
       --channel-bot-name <CHANNEL_BOT_NAME>
           Name of channel bot

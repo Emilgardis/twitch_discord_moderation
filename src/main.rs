@@ -4,8 +4,8 @@ pub mod subscriber;
 pub mod util;
 pub mod webhook;
 
-use eyre::WrapErr;
 use clap::{builder::ArgPredicate, ArgGroup, Parser};
+use eyre::WrapErr;
 
 #[derive(Parser, Debug)]
 #[clap(about, version, long_version = &**util::LONG_VERSION,
@@ -19,7 +19,7 @@ pub struct Opts {
     pub discord_webhook: url::Url,
     /// OAuth2 Access token
     #[clap(long, env, hide_env = true, group = "token",
-        value_parser = is_token, required_unless_present = "service"
+        value_parser = is_token, required_unless_present_any = ["service", "dcf_oauth"]
     )]
     pub access_token: Option<Secret>,
     /// Name of channel to monitor. If left out, defaults to owner of access token.
@@ -32,7 +32,7 @@ pub struct Opts {
     ///
     /// This application does not do any refreshing of tokens.
     #[clap(long, env, hide_env = true, group = "service",
-        value_parser = url::Url::parse, required_unless_present = "token"
+        value_parser = url::Url::parse, required_unless_present_any = ["token", "dcf_oauth"]
     )]
     pub oauth2_service_url: Option<url::Url>,
     /// Bearer key for authorizing on the OAuth2 service url.
@@ -56,6 +56,16 @@ pub struct Opts {
         default_value_if("oauth2_service_url", ArgPredicate::IsPresent, Some("30"))
     )]
     pub oauth2_service_refresh: Option<u64>,
+    /// Client id to get a token. Stores the token data in the path specified by `--dcf-secret` (client id and optional secret is not stored)
+    #[clap(long, env, hide_env = true, group = "dcf_oauth", required_unless_present_any = ["access_token", "service"])]
+    pub dcf_oauth_client_id: Option<twitch_api::twitch_oauth2::ClientId>,
+    /// Client secret to get a token. Only needed for confidential applications.
+    #[clap(long, env, hide_env = true, group = "dcf_oauth")]
+    pub dcf_oauth_client_secret: Option<twitch_api::twitch_oauth2::ClientSecret>,
+    /// Path for storing DCF oauth.
+    #[clap(long, env, hide_env = true, group = "dcf_oauth", default_value = "./.dcf_secret")]
+    pub dcf_secret_path: Option<std::path::PathBuf>,
+    ///
     /// Name of channel bot.
     #[clap(long, env, hide_env = true)]
     pub channel_bot_name: Option<String>,
