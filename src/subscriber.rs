@@ -1,5 +1,4 @@
 use eyre::WrapErr;
-use futures::prelude::*;
 use futures::TryStreamExt;
 use std::sync::Arc;
 use tokio::sync;
@@ -294,12 +293,12 @@ impl Subscriber {
         })
     }
 
-    #[tracing::instrument(name = "subscriber", skip(self, opts), fields(
+    #[tracing::instrument(name = "subscriber", skip(self, _opts), fields(
         self.channel_id = %self.channel_id,
         self.channel_login = %self.channel_login,
         self.token_id = %self.token_id,
     ))]
-    pub async fn run(self, opts: &crate::Opts) -> Result<(), eyre::Report> {
+    pub async fn run(self, _opts: &crate::Opts) -> Result<(), eyre::Report> {
         let client = twitch_api::HelixClient::with_client(self.client);
 
         let websocket = WebsocketClient {

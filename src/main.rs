@@ -63,7 +63,13 @@ pub struct Opts {
     #[clap(long, env, hide_env = true, group = "dcf_oauth")]
     pub dcf_oauth_client_secret: Option<twitch_api::twitch_oauth2::ClientSecret>,
     /// Path for storing DCF oauth.
-    #[clap(long, env, hide_env = true, group = "dcf_oauth", default_value = "./.dcf_secret")]
+    #[clap(
+        long,
+        env,
+        hide_env = true,
+        group = "dcf_oauth",
+        default_value = "./.dcf_secret"
+    )]
     pub dcf_secret_path: Option<std::path::PathBuf>,
     ///
     /// Name of channel bot.

@@ -140,7 +140,6 @@ impl Webhook {
             ActionV2::Vip(moderate::Vip {
                 user_id,
                 user_login,
-                user_name,
                 ..
             }) => {
                 message = Some(format!(
@@ -151,7 +150,6 @@ impl Webhook {
             ActionV2::Unvip(moderate::Unvip {
                 user_id,
                 user_login,
-                user_name,
                 ..
             }) => {
                 message = Some(format!(
@@ -162,7 +160,6 @@ impl Webhook {
             ActionV2::Mod(moderate::Mod {
                 user_id,
                 user_login,
-                user_name,
                 ..
             }) => {
                 message = Some(format!(
@@ -173,7 +170,6 @@ impl Webhook {
             ActionV2::Unmod(moderate::Unmod {
                 user_id,
                 user_login,
-                user_name,
                 ..
             }) => {
                 message = Some(format!(
@@ -184,7 +180,6 @@ impl Webhook {
             ActionV2::Raid(moderate::Raid {
                 user_id,
                 user_login,
-                user_name,
                 viewer_count,
                 ..
             }) => {
@@ -196,7 +191,6 @@ impl Webhook {
             ActionV2::Unraid(moderate::Unraid {
                 user_id,
                 user_login,
-                user_name,
                 ..
             }) => {
                 message = Some(format!(
@@ -205,10 +199,8 @@ impl Webhook {
                     ));
             }
             ActionV2::ApproveUnbanRequest(moderate::UnbanRequest {
-                is_approved,
                 user_id,
                 user_login,
-                user_name,
                 moderator_message,
                 ..
             }) => {
@@ -219,10 +211,8 @@ impl Webhook {
                 ));
             }
             ActionV2::DenyUnbanRequest(moderate::UnbanRequest {
-                is_approved,
                 user_id,
                 user_login,
-                user_name,
                 moderator_message,
                 ..
             }) => {
@@ -274,7 +264,6 @@ impl Webhook {
             ActionV2::Warn(moderate::Warn {
                 user_id,
                 user_login,
-                user_name,
                 reason,
                 chat_rules_cited, // Option<Vec<String>>,
                 ..
@@ -294,24 +283,6 @@ impl Webhook {
                         },
                     ));
             },
-            ActionV2::DenyUnbanRequest(unban_request)
-            | ActionV2::ApproveUnbanRequest(unban_request) => {
-                self.webhook
-                    .send(|message| {
-                        let action = if unban_request.is_approved {
-                            "APPROVED"
-                        } else {
-                            "DENIED"
-                        };
-                        message.content(&format!(
-                            "🔨_Twitch Moderation_ |\n*{moderator}*: /{action} {target} : {moderator_message}",
-                            target = unban_request.user_login,
-                            moderator_message = unban_request.moderator_message.sanitize()
-                        ))
-                    })
-                    .await
-                    .map_err(|e| eyre::eyre!(e.to_string()))?;
-            }
             _ => {
                 tracing::warn!("Unknown action {:?}", action);
             }
