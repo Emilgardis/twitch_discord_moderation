@@ -211,7 +211,7 @@ pub async fn get_access_token(
         &opts.dcf_oauth_client_secret,
         &opts.dcf_secret_path,
     ) {
-        let webhook = discord_webhook::Webhook::from_url("https://discord.com/api/webhooks/756613357879951472/O3Z9MFDdKYaEauWWRPRRrEHUg7n-zGrHjzwqZ2gIhN_qjWxBta4Dmj8Ne6XE688x1fgG");
+        let webhook = discord_webhook::Webhook::from_url(opts.discord_webhook.as_str());
         get_dcf_token(
             client,
             &webhook,

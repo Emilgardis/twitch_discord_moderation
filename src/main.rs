@@ -11,6 +11,7 @@ use eyre::WrapErr;
 #[clap(about, version, long_version = &**util::LONG_VERSION,
     group = ArgGroup::new("token").multiple(false).required(false),
     group = ArgGroup::new("service").multiple(true).requires("oauth2_service_url"),
+    group = ArgGroup::new("dcf_oauth").multiple(true).requires("dcf_oauth_client_id"),
     group = ArgGroup::new("channel").multiple(true).required(false),
 )]
 pub struct Opts {
