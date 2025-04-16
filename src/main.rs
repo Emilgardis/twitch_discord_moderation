@@ -124,9 +124,9 @@ async fn main() {
             .to_string()
     );
 
-    match run(&opts).await {
-        Ok(_) => {}
-        Err(err) => {
+        match run(&opts).await {
+            Ok(_) => {}
+            Err(err) => {
             tracing::error!(Error = %err, "Could not handle message");
             for err in <eyre::Report>::chain(&err).skip(1) {
                 tracing::error!(Error = %err, "Caused by");
@@ -138,15 +138,15 @@ async fn main() {
 pub async fn run(opts: &Opts) -> eyre::Result<()> {
     let subscriber = subscriber::Subscriber::new(opts)
         .await
-        .context("when constructing subscriber")?;
-    let recv = subscriber.channel.subscribe();
+        .context("could not construct subscriber")?;
     let webhook = webhook::Webhook::new(subscriber.channel_login.clone(), opts);
+    let recv = subscriber.channel.subscribe();
     tracing::debug!("entering main block");
     tokio::select!(
     r = subscriber.run(opts) => {
         tracing::warn!(message = "subscriber exited early", result = ?r);
         if r.is_err() {
-            r.with_context(|| "subscriber returned with error to panic on")?
+            r.with_context(|| "subscriber error")?
         } else {
             eyre::bail!("subscriber returned early when it should not have")
         }
@@ -154,7 +154,7 @@ pub async fn run(opts: &Opts) -> eyre::Result<()> {
     r = webhook.run(recv) => {
         tracing::warn!(message = "webhook exited early", result = ?r);
         if r.is_err() {
-            r.with_context(|| "webhook returned with error to panic on")?
+            r.with_context(|| "webhook error")?
         } else {
             eyre::bail!("webhook returned early when it should not have")
         }

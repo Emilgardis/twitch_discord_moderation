@@ -33,7 +33,6 @@ pub async fn make_token(
     UserToken::from_existing(client, token.into(), None, None)
         .await
         .context("could not use access token")
-        .map_err(Into::into)
 }
 
 pub async fn get_dcf_token(
@@ -118,7 +117,6 @@ pub async fn do_dcf_flow(
     let code = &response.user_code;
     println!("Please visit {} and enter the code: {}", url, code);
     tracing::info!("waiting for user to enter code at {}", url);
-    // send discord webhook if the user hasn't authorized in 30 seconds.
     webhook
         .send(|m| {
             m.content(&format!(
@@ -170,7 +168,7 @@ pub async fn get_access_token(
                 let service_response: serde_json::Value = response
                     .json()
                     .await
-                    .context("when transforming oauth service response to json")?;
+                    .context("could not transform oauth service response to json")?;
                 make_token(
                     client,
                     service_response
@@ -231,7 +229,7 @@ impl Subscriber {
         let client = reqwest::Client::default_client();
         let access_token = get_access_token(&client, opts)
             .await
-            .context("when getting access token")?;
+            .context("could not get access token")?;
         let token_user_id = access_token
             .validate_token(&client)
             .await?
@@ -245,7 +243,7 @@ impl Subscriber {
                 twitch_api::HelixClient::with_client(client.clone())
                     .get_user_from_id(id, &access_token)
                     .await
-                    .wrap_err("when calling twitch api")?
+                    .wrap_err("could not get user from id")?
                     .ok_or_else(|| eyre::eyre!("there is no user id {}", &id))?
                     .login,
             )
@@ -255,7 +253,7 @@ impl Subscriber {
                 twitch_api::HelixClient::with_client(client.clone())
                     .get_user_from_login(login, &access_token)
                     .await
-                    .wrap_err("when calling twitch api")?
+                    .wrap_err("could not get user from login")?
                     .ok_or_else(|| eyre::eyre!("there is no user with login name {}", &login))?
                     .id,
                 login.clone().into(),
@@ -341,7 +339,7 @@ impl WebsocketClient {
         let (socket, _) =
             tokio_tungstenite::connect_async_with_config(&self.connect_url, Some(config), false)
                 .await
-                .wrap_err("Can't connect")?;
+                .wrap_err("can't connect")?;
 
         Ok(socket)
     }
@@ -359,7 +357,7 @@ impl WebsocketClient {
         let mut s = self
             .connect()
             .await
-            .context("when establishing connection")?;
+            .context("connection could not be estasblished")?;
         // Loop over the stream, processing messages as they come in.
         while let Some(msg) = futures::StreamExt::next(&mut s).await {
             let span = tracing::debug_span!("message received", raw_message = ?msg);
@@ -374,10 +372,10 @@ impl WebsocketClient {
                         .connect()
                         .instrument(span)
                         .await
-                        .context("when reestablishing connection")?;
+                        .context("could not reestablish connection")?;
                     continue;
                 }
-                _ => msg.context("when getting message")?,
+                _ => msg.context("unexpected error message")?,
             };
             self.process_message(msg, &mut event_fn)
                 .instrument(span)

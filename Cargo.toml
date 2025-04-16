@@ -27,7 +27,7 @@ eyre = "0.6.12"
 time = "0.3.41"
 owo-colors = "4.2.0"
 dotenvy = "0.15.7"
-twitch_api = { version = "0.7.2", features = ["reqwest", "helix", "eventsub"] }
+twitch_api = { version = "0.7.2", features = ["reqwest", "helix", "eventsub", "trace_unknown_fields"] }
 twitch_types = { version = "0.4.8", features = ["time"] }
 tokio-tungstenite = { version = "0.26.2", features = ["native-tls", "url"] }
 reqwest = { version = "0.12.15", features = ["json"] }

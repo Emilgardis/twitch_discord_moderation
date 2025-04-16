@@ -48,7 +48,7 @@ pub static LONG_VERSION: Lazy<String> = Lazy::new(|| {
 
 struct ColorLevel<'a>(&'a Level);
 
-impl<'a> core::fmt::Display for ColorLevel<'a> {
+impl core::fmt::Display for ColorLevel<'_> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match *self.0 {
             Level::TRACE => "TRACE".purple().to_string(),
@@ -178,7 +178,7 @@ where
     }
 }
 
-impl<'a, S, N> core::fmt::Display for FullCtx<'a, S, N>
+impl<S, N> core::fmt::Display for FullCtx<'_, S, N>
 where
     S: Subscriber + for<'lookup> LookupSpan<'lookup>,
     N: for<'writer> FormatFields<'writer> + 'static,
