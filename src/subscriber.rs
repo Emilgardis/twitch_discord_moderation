@@ -76,30 +76,19 @@ pub async fn get_dcf_token(
     };
 
     // validate, refresh if needed, store
-    let mut token = match UserToken::from_existing(
+    let mut token = match UserToken::from_existing_or_refresh_token(
         client,
         access_token,
-        Some(refresh_token.clone()),
+        refresh_token.clone(),
+        client_id.clone(),
         client_secret.clone(),
     )
     .await
     {
         Ok(token) => token,
         Err(e) => {
-            tracing::warn!("could not use stored token, trying to refresh: {}", e);
-            // data in file was invalid, try refresh;
-            match refresh_token
-                .refresh_token(client, &client_id, client_secret.as_ref())
-                .await
-            {
-                Ok((a, _, r)) => UserToken::from_existing(client, a, r, client_secret)
-                    .await
-                    .context("could not use access newly retrieved token")?,
-                Err(e) => {
-                    tracing::warn!("could not use stored refresh token, trying new dcf: {}", e);
-                    do_dcf_flow(client, webhook, client_id, scopes).await?
-                }
-            }
+            tracing::warn!("could not use stored token, trying new dcf: {}", e);
+            do_dcf_flow(client, webhook, client_id, scopes).await?
         }
     };
 
