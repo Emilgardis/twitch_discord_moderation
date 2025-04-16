@@ -10,7 +10,7 @@ description = "Bot to send twitch moderator actions to a discord webhook"
 publish = false
 repository = "https://github.com/Emilgardis/twitch_discord_moderation"
 build = "build.rs"
-rust-version = "1.77"
+rust-version = "1.86"
 
 [dependencies]
 tokio = { version = "1.44.2", features = ["full"] }
