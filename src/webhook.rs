@@ -29,7 +29,7 @@ impl Webhook {
 
     #[tracing::instrument(name = "webhook", skip(self, recv))]
     pub async fn run(
-        self,
+        &self,
         mut recv: sync::broadcast::Receiver<crate::subscriber::Events>,
     ) -> Result<(), eyre::Report> {
         while let Ok(msg) = recv.recv().await {

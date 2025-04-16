@@ -87,12 +87,23 @@ pub async fn get_dcf_token(
         Ok(token) => token,
         Err(e) => {
             tracing::warn!("could not use stored token, trying new dcf: {}", e);
-            do_dcf_flow(client, webhook, client_id, scopes).await?
+            do_dcf_flow(client, webhook, client_id.clone(), scopes.clone()).await?
         }
     };
 
     if token.expires_in() < std::time::Duration::from_secs(60) {
         token.refresh_token(client).await?;
+    }
+    let validator = scopes
+        .iter()
+        .cloned()
+        .map(|s| s.to_validator())
+        .collect::<Vec<_>>();
+    let validator =
+        twitch_oauth2::Validator::All(twitch_oauth2::scopes::validator::Sized(validator.into()));
+    if let Some(missing) = validator.missing(token.scopes()) {
+        tracing::warn!(%missing, "missing scopes, trying new dcf");
+        token = do_dcf_flow(client, webhook, client_id, scopes).await?;
     }
     let file = std::fs::File::create(&secret_path)?;
     serde_json::to_writer(
@@ -285,8 +296,8 @@ impl Subscriber {
         self.channel_login = %self.channel_login,
         self.token_id = %self.token_id,
     ))]
-    pub async fn run(self, _opts: &crate::Opts) -> Result<(), eyre::Report> {
-        let client = twitch_api::HelixClient::with_client(self.client);
+    pub async fn run(&self, _opts: &crate::Opts) -> Result<(), eyre::Report> {
+        let client = twitch_api::HelixClient::with_client(self.client.clone());
 
         let websocket = WebsocketClient {
             session_id: None,
@@ -464,12 +475,6 @@ impl WebsocketClient {
                 broadcaster_id.clone(),
                 token_user_id.clone(),
             );
-            if let Some(missing) =
-                <eventsub::channel::ChannelModerateV2 as eventsub::EventSubscription>::SCOPE
-                    .missing(token.scopes())
-            {
-                eyre::bail!("missing scope(s) for channel_moderate_v2: {missing}");
-            }
             self.client
                 .create_eventsub_subscription(moderate, transport.clone(), &*token)
                 .await?;

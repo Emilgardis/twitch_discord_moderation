@@ -27,6 +27,7 @@ DCF_OAUTH_CLIENT_ID=ytf4qimvfnkm2egtyxi4ckm4bex49e # This is a client id created
 CHANNEL_LOGIN=justintv
 DISCORD_WEBHOOK=https://discordapp.com/api/webhooks/111111111111/aaaaaaaaaaaaaaa
 RUST_LOG=info
+DISCORD_ERROR_REPORT=false # set this to true to report unrecoverable errors to the discord instead of making the program exit.
 ```
 
 With the above config, the bot will post a message to the webhook prompting a user to login with a link. Once authorized, the bot will monitor moderation actions on the specified channel `justintv` (if the user that authorized has permission to do that) and post them to the discord webhook.
@@ -83,6 +84,9 @@ Options:
 
       --channel-bot-name <CHANNEL_BOT_NAME>
           Name of channel bot
+
+      --discord-error-report
+          Report unrecoverable errors to the discord webhook instead of making the program exit
 
   -h, --help
           Print help (see a summary with '-h')

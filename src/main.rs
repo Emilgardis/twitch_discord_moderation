@@ -76,6 +76,9 @@ pub struct Opts {
     /// Name of channel bot.
     #[clap(long, env, hide_env = true)]
     pub channel_bot_name: Option<String>,
+    /// Report unrecoverable errors to the discord webhook instead of making the program exit.
+    #[clap(long, env, hide_env = true)]
+    pub discord_error_report: bool,
 }
 
 pub fn is_token(s: &str) -> eyre::Result<Secret> {
@@ -112,7 +115,7 @@ impl std::fmt::Debug for Secret {
 }
 
 #[tokio::main]
-async fn main() {
+async fn main() -> eyre::Result<()> {
     let _ = dotenvy::dotenv().with_context(|| "couldn't load .env file"); //ignore error
     let _ = util::build_logger();
 
@@ -123,16 +126,88 @@ async fn main() {
             .unwrap_err()
             .to_string()
     );
+    #[allow(unused_assignments)]
+    let (mut times, mut when, mut error, mut old_err) =
+        (0, std::time::Instant::now(), String::new(), String::new());
 
+    let err = loop {
         match run(&opts).await {
             Ok(_) => {}
             Err(err) => {
-            tracing::error!(Error = %err, "Could not handle message");
-            for err in <eyre::Report>::chain(&err).skip(1) {
-                tracing::error!(Error = %err, "Caused by");
+                error = "".to_string();
+                for err in <eyre::Report>::chain(&err) {
+                    error.push_str(&format!("> {err}\n"));
+                }
+                if when.elapsed() > std::time::Duration::from_secs(5 * 60) {
+                    times = 0;
+                }
+                if times == 0 {
+                    old_err = error.clone();
+                }
+                times += 1;
+                if when.elapsed() < std::time::Duration::from_secs(2) {
+                    break err;
+                }
+                if times >= 10 {
+                    break err;
+                } else if times == 1 {
+                    // don't sleep on the first error
+                } else {
+                    let backoff = 2u64.pow(times as u32).min(30);
+                    tracing::warn!(
+                        "Error occurred, sleeping for {backoff} seconds. Error: {error}"
+                    );
+                    tokio::time::sleep(std::time::Duration::from_secs(backoff)).await;
+                    when = std::time::Instant::now();
+                }
+                tracing::error!("An error occurred.");
+                for err in <eyre::Report>::chain(&err) {
+                    tracing::error!(Error = %err);
+                }
             }
         }
+    };
+    tracing::error!("An error occurred.");
+    for err in <eyre::Report>::chain(&err) {
+        tracing::error!(Error = %err);
     }
+    if opts.discord_error_report {
+        let first_error = if error != old_err && !old_err.is_empty() {
+            format!("Error 1:\n```\n{old_err}\n```\nError 2:\n")
+        } else {
+            "".to_string()
+        };
+        let many = if times > 0 {
+            format!(" (x{})", times + 1)
+        } else {
+            "".to_string()
+        };
+        let e = discord_webhook::Webhook::from_url(opts.discord_webhook.as_str())
+            .send(|m| {
+                m.username("twitch_moderation").content(&format!(
+                    "The bot crashed{many}. The bot has stopped\n{first_error}```\n{error}```"
+                ))
+            })
+            .await
+            .map_err(|e| eyre::eyre!("{e}"));
+        // message was sent ok. stall the program to prevent reporting again
+        if e.is_ok() {
+            tracing::info!(
+                "Error report sent to discord. Stalling the program to prevent it from exiting."
+            );
+            futures::future::pending::<()>().await;
+            unreachable!();
+        } else {
+            tracing::error!(
+                "Error report failed to send to discord. Error: {}",
+                e.unwrap_err()
+            );
+            // some sleeping so that we don't hit the resources again immediately if the program gets restarted
+            // and the error is still there
+            tokio::time::sleep(std::time::Duration::from_secs(60)).await;
+        }
+    }
+    return Err(err);
 }
 
 pub async fn run(opts: &Opts) -> eyre::Result<()> {
