@@ -291,12 +291,12 @@ impl Subscriber {
         })
     }
 
-    #[tracing::instrument(name = "subscriber", skip(self, _opts), fields(
+    #[tracing::instrument(name = "subscriber", skip(self, opts), fields(
         self.channel_id = %self.channel_id,
         self.channel_login = %self.channel_login,
         self.token_id = %self.token_id,
     ))]
-    pub async fn run(&self, _opts: &crate::Opts) -> Result<(), eyre::Report> {
+    pub async fn run(&self, opts: &crate::Opts) -> Result<(), eyre::Report> {
         let client = twitch_api::HelixClient::with_client(self.client.clone());
 
         let websocket = WebsocketClient {
@@ -308,15 +308,18 @@ impl Subscriber {
         };
 
         websocket
-            .run(|event, timestamp| async {
-                let Some(event) = Events::new(event, timestamp) else {
-                    return Ok(());
-                };
-                self.channel
-                    .send(event)
-                    .map_err(|_| eyre::eyre!("could not send event"))?;
-                Ok(())
-            })
+            .run(
+                |event, timestamp| async {
+                    let Some(event) = Events::new(event, timestamp) else {
+                        return Ok(());
+                    };
+                    self.channel
+                        .send(event)
+                        .map_err(|_| eyre::eyre!("could not send event"))?;
+                    Ok(())
+                },
+                opts,
+            )
             .await?;
         Ok(())
     }
@@ -360,6 +363,7 @@ impl WebsocketClient {
     pub async fn run<Fut>(
         mut self,
         mut event_fn: impl FnMut(Event, types::Timestamp) -> Fut,
+        opts: &crate::Opts,
     ) -> Result<(), eyre::Report>
     where
         Fut: std::future::Future<Output = Result<(), eyre::Report>>,
@@ -379,6 +383,21 @@ impl WebsocketClient {
                     tracing::warn!(
                         "connection was sent an unexpected frame or was reset, reestablishing it"
                     );
+                    {
+                        let mut token = self.token.lock().await;
+                        if token.expires_in() < std::time::Duration::from_secs(60) {
+                            if token.refresh_token.is_some() {
+                                tracing::info!("token is about to expire, refreshing it");
+                                token
+                                    .refresh_token(&self.client)
+                                    .await
+                                    .wrap_err("could not refresh token")?;
+                            } else {
+                                *token =
+                                    get_access_token(&self.client.clone_client(), opts).await?;
+                            }
+                        }
+                    }
                     s = self
                         .connect()
                         .instrument(span)
