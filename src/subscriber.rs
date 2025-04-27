@@ -237,7 +237,8 @@ impl Subscriber {
     #[tracing::instrument(skip(opts))]
     pub async fn new(opts: &crate::Opts) -> Result<Self, eyre::Report> {
         use twitch_api::client::ClientDefault;
-        let client = reqwest::Client::default_client();
+        let product = format!("twitch_discord_moderation/{} (https://github.com/Emilgardis/twitch_discord_moderation)", env!("CARGO_PKG_VERSION"));
+        let client = reqwest::Client::default_client_with_name(Some(product.try_into()?))?;
         let access_token = get_access_token(&client, opts)
             .await
             .context("could not get access token")?;
