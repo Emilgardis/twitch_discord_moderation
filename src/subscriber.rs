@@ -387,16 +387,7 @@ impl WebsocketClient {
                     {
                         let mut token = self.token.lock().await;
                         if token.expires_in() < std::time::Duration::from_secs(60) {
-                            if token.refresh_token.is_some() {
-                                tracing::info!("token is about to expire, refreshing it");
-                                token
-                                    .refresh_token(&self.client)
-                                    .await
-                                    .wrap_err("could not refresh token")?;
-                            } else {
-                                *token =
-                                    get_access_token(&self.client.clone_client(), opts).await?;
-                            }
+                            *token = get_access_token(&self.client.clone_client(), opts).await?;
                         }
                     }
                     s = self
