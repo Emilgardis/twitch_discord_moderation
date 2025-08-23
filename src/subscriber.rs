@@ -305,6 +305,7 @@ impl Subscriber {
             token: Arc::new(Mutex::new(self.access_token.clone())),
             client,
             connect_url: twitch_api::TWITCH_EVENTSUB_WEBSOCKET_URL.clone(),
+            keepalive_timeout_seconds: 60,
             chats: vec![self.channel_id.clone()],
         };
 
@@ -337,6 +338,7 @@ pub struct WebsocketClient {
     pub connect_url: url::Url,
     /// Chats to connect to.
     pub chats: Vec<twitch_api::types::UserId>,
+    keepalive_timeout_seconds: i64,
 }
 
 impl WebsocketClient {
@@ -359,6 +361,25 @@ impl WebsocketClient {
         Ok(socket)
     }
 
+    async fn reconnect(
+        &mut self,
+        opts: &crate::Opts,
+        stream: &mut tokio_tungstenite::WebSocketStream<
+            tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>,
+        >,
+    ) -> Result<(), eyre::Report> {
+        {
+            let mut token = self.token.lock().await;
+            if token.expires_in() < std::time::Duration::from_secs(60) {
+                *token = get_access_token(&self.client.clone_client(), opts).await?;
+            }
+        }
+        *stream = self
+            .connect()
+            .await
+            .context("could not reestablish connection")?;
+        Ok(())
+    }
     /// Run the websocket subscriber
     #[tracing::instrument(name = "subscriber", skip_all, fields())]
     pub async fn run<Fut>(
@@ -374,34 +395,43 @@ impl WebsocketClient {
             .connect()
             .await
             .context("connection could not be estasblished")?;
+
         // Loop over the stream, processing messages as they come in.
-        while let Some(msg) = futures::StreamExt::next(&mut s).await {
-            let span = tracing::debug_span!("message received", raw_message = ?msg);
-            let msg = match msg {
-                Err(tungstenite::Error::Protocol(
-                    tungstenite::error::ProtocolError::ResetWithoutClosingHandshake,
-                )) => {
+        loop {
+            match tokio::time::timeout(
+                std::time::Duration::from_secs(self.keepalive_timeout_seconds as u64),
+                futures::StreamExt::next(&mut s),
+            )
+            .await
+            {
+                Err(_) => {
                     tracing::warn!(
-                        "connection was sent an unexpected frame or was reset, reestablishing it"
+                        "connection has not responded in {}s, reconnecting",
+                        self.keepalive_timeout_seconds
                     );
-                    {
-                        let mut token = self.token.lock().await;
-                        if token.expires_in() < std::time::Duration::from_secs(60) {
-                            *token = get_access_token(&self.client.clone_client(), opts).await?;
-                        }
-                    }
-                    s = self
-                        .connect()
-                        .instrument(span)
-                        .await
-                        .context("could not reestablish connection")?;
-                    continue;
+                    self.reconnect(opts, &mut s).await?;
                 }
-                _ => msg.context("unexpected error message")?,
-            };
-            self.process_message(msg, &mut event_fn)
-                .instrument(span)
-                .await?
+                Ok(None) => {
+                    tracing::warn!("connection has ended unexpectedly, reconnecting",);
+                    self.reconnect(opts, &mut s).await?;
+                }
+                Ok(Some(msg)) => {
+                    let span = tracing::debug_span!("message received", raw_message = ?msg);
+                    let msg = match msg {
+                        Err(tungstenite::Error::Protocol(
+                            tungstenite::error::ProtocolError::ResetWithoutClosingHandshake,
+                        )) => {
+                            tracing::warn!("connection was sent an unexpected frame or was reset, reestablishing it");
+                            self.reconnect(opts, &mut s).await?;
+                            continue;
+                        }
+                        _ => msg.context("unexpected error message")?,
+                    };
+                    self.process_message(msg, &mut event_fn)
+                        .instrument(span)
+                        .await?;
+                }
+            }
         }
         Ok(())
     }
@@ -455,6 +485,9 @@ impl WebsocketClient {
         self.session_id = Some(data.id.to_string());
         if let Some(url) = data.reconnect_url {
             self.connect_url = url.parse()?;
+        }
+        if let Some(kt) = data.keepalive_timeout_seconds {
+            self.keepalive_timeout_seconds = kt;
         }
         let token = self.token.lock().await;
         let transport = eventsub::Transport::websocket(data.id.clone());
