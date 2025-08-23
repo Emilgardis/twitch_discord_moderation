@@ -433,7 +433,6 @@ impl WebsocketClient {
                 }
             }
         }
-        Ok(())
     }
 
     /// Process a message from the websocket
