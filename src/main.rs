@@ -116,6 +116,7 @@ impl std::fmt::Debug for Secret {
 
 #[tokio::main]
 async fn main() -> eyre::Result<()> {
+    use twitch_api::client::ClientDefault;
     let _ = dotenvy::dotenv().with_context(|| "couldn't load .env file"); //ignore error
     let _ = util::build_logger();
 
@@ -129,9 +130,14 @@ async fn main() -> eyre::Result<()> {
     #[allow(unused_assignments)]
     let (mut times, mut when, mut error, mut old_err) =
         (0, std::time::Instant::now(), String::new(), String::new());
+    let product = format!(
+        "twitch_discord_moderation/{} (https://github.com/Emilgardis/twitch_discord_moderation)",
+        env!("CARGO_PKG_VERSION")
+    );
+    let client = reqwest::Client::default_client_with_name(Some(product.try_into()?))?;
 
     let err = loop {
-        match run(&opts).await {
+        match run(&client, &opts).await {
             Ok(_) => {}
             Err(err) => {
                 error = "".to_string();
@@ -182,14 +188,18 @@ async fn main() -> eyre::Result<()> {
         } else {
             "".to_string()
         };
-        let e = discord_webhook::Webhook::from_url(opts.discord_webhook.as_str())
-            .send(|m| {
-                m.username("twitch_moderation").content(&format!(
-                    "The bot crashed{many}. The bot has stopped\n{first_error}```\n{error}```"
-                ))
-            })
-            .await
-            .map_err(|e| eyre::eyre!("{e}"));
+        let http = serenity::http::HttpBuilder::without_token()
+            .client(client.clone())
+            .build();
+        let webhook =
+            serenity::model::webhook::Webhook::from_url(&http, opts.discord_webhook.as_str())
+                .await?;
+        let message = serenity::all::ExecuteWebhook::new()
+            .username("twitch_moderation")
+            .content(format!(
+                "The bot crashed{many}. The bot has stopped\n{first_error}```\n{error}```"
+            ));
+        let e = webhook.execute(&http, false, message).await;
         // message was sent ok. stall the program to prevent reporting again
         if e.is_ok() {
             tracing::info!(
@@ -210,11 +220,11 @@ async fn main() -> eyre::Result<()> {
     return Err(err);
 }
 
-pub async fn run(opts: &Opts) -> eyre::Result<()> {
-    let subscriber = subscriber::Subscriber::new(opts)
+pub async fn run(client: &reqwest::Client, opts: &Opts) -> eyre::Result<()> {
+    let subscriber = subscriber::Subscriber::new(&client, opts)
         .await
         .context("could not construct subscriber")?;
-    let webhook = webhook::Webhook::new(subscriber.channel_login.clone(), opts);
+    let webhook = webhook::Webhook::new(&client, subscriber.channel_login.clone(), opts).await?;
     let recv = subscriber.channel.subscribe();
     tracing::debug!("entering main block");
     tokio::select!(

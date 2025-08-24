@@ -5,9 +5,10 @@ use twitch_api::{
     types,
 };
 pub struct Webhook {
-    pub webhook: discord_webhook::Webhook,
+    pub webhook: serenity::model::webhook::Webhook,
     pub channel_login: types::UserName,
     pub channel_bot_name: Option<types::DisplayName>,
+    discord_http: serenity::http::Http,
 }
 
 impl Webhook {
@@ -19,12 +20,24 @@ impl Webhook {
         )
     }
 
-    pub fn new(channel_login: types::UserName, opts: &crate::Opts) -> Webhook {
-        Webhook {
-            webhook: discord_webhook::Webhook::from_url(opts.discord_webhook.as_str()),
+    pub async fn new(
+        client: &reqwest::Client,
+        channel_login: types::UserName,
+        opts: &crate::Opts,
+    ) -> Result<Webhook, eyre::Report> {
+        let http = serenity::http::HttpBuilder::without_token()
+            .client(client.clone())
+            .build();
+        Ok(Webhook {
+            webhook: serenity::model::webhook::Webhook::from_url(
+                &http,
+                opts.discord_webhook.as_str(),
+            )
+            .await?,
             channel_login,
             channel_bot_name: opts.channel_bot_name.clone().map(types::DisplayName::new),
-        }
+            discord_http: http,
+        })
     }
 
     #[tracing::instrument(name = "webhook", skip(self, recv))]
@@ -288,13 +301,12 @@ impl Webhook {
             }
         }
         if let Some(text) = message {
+            let builder = serenity::all::ExecuteWebhook::new()
+                .content(&text)
+                .username(&done_by);
             self.webhook
-                .send(|message| {
-                    message.content(&text);
-                    message.username(&done_by)
-                })
-                .await
-                .map_err(|e| eyre::eyre!(e.to_string()))?;
+                .execute(&self.discord_http, false, builder)
+                .await?;
         }
         Ok(())
     }
