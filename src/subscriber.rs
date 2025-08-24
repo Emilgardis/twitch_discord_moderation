@@ -299,13 +299,15 @@ impl Subscriber {
     ))]
     pub async fn run(&self, opts: &crate::Opts) -> Result<(), eyre::Report> {
         let client = twitch_api::HelixClient::with_client(self.client.clone());
+        let mut connect_url = twitch_api::TWITCH_EVENTSUB_WEBSOCKET_URL.clone();
+        connect_url.set_query(Some("keepalive_timeout_seconds=30"));
 
         let websocket = WebsocketClient {
             session_id: None,
             token: Arc::new(Mutex::new(self.access_token.clone())),
             client,
-            connect_url: twitch_api::TWITCH_EVENTSUB_WEBSOCKET_URL.clone(),
-            keepalive_timeout_seconds: 60,
+            connect_url,
+            keepalive_timeout_seconds: 10,
             chats: vec![self.channel_id.clone()],
         };
 
@@ -398,8 +400,10 @@ impl WebsocketClient {
 
         // Loop over the stream, processing messages as they come in.
         loop {
+            // respect keepalive timeout
             match tokio::time::timeout(
-                std::time::Duration::from_secs(self.keepalive_timeout_seconds as u64),
+                // add 10% offset to keepalive
+                std::time::Duration::from_millis(self.keepalive_timeout_seconds as u64 * 1100),
                 futures::StreamExt::next(&mut s),
             )
             .await
