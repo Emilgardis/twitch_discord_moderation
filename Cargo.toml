@@ -10,7 +10,7 @@ description = "Bot to send twitch moderator actions to a discord webhook"
 publish = false
 repository = "https://github.com/Emilgardis/twitch_discord_moderation"
 build = "build.rs"
-rust-version = "1.86"
+rust-version = "1.88"
 
 [dependencies]
 tokio = { version = "1.44.2", features = ["full"] }
@@ -33,13 +33,13 @@ tokio-tungstenite = { version = "0.26.2", features = ["native-tls", "url"] }
 reqwest = { version = "0.12.15", features = ["json"] }
 url = "2.5.4"
 futures = "0.3.31"
-discord_webhook = { git = "https://github.com/thoo0224/webhook-rs", rev = "dc217e1fe", package = "webhook" }
 humantime = "2.2.0"
 serde = "1.0.219"
 serde_json = "1.0.140"
 fastrand = "2.3.0"
 clap = { version = "4.5.36", features = ["derive", "env"] }
 once_cell = "1.21.3"
+serenity = { version = "0.12.4", default-features = false, features = ["model", "rustls_backend"], git = "https://github.com/serenity-rs/serenity/", rev = "580c6b9" }
 
 [workspace]
 members = ["xtask"]

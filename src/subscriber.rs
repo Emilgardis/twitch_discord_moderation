@@ -37,7 +37,8 @@ pub async fn make_token(
 
 pub async fn get_dcf_token(
     client: &reqwest::Client,
-    webhook: &discord_webhook::Webhook,
+    discord_http: &serenity::http::Http,
+    webhook: &serenity::model::webhook::Webhook,
     scopes: Vec<twitch_oauth2::Scope>,
     client_id: twitch_oauth2::ClientId,
     client_secret: Option<twitch_oauth2::ClientSecret>,
@@ -65,12 +66,26 @@ pub async fn get_dcf_token(
             (access_token, refresh_token)
         } else {
             // file is not correct
-            let token = do_dcf_flow(client, webhook, client_id.clone(), scopes.clone()).await?;
+            let token = do_dcf_flow(
+                client,
+                discord_http,
+                webhook,
+                client_id.clone(),
+                scopes.clone(),
+            )
+            .await?;
             (token.access_token, token.refresh_token.unwrap())
         }
     } else {
         // file doesn't exist
-        let token = do_dcf_flow(client, webhook, client_id.clone(), scopes.clone()).await?;
+        let token = do_dcf_flow(
+            client,
+            discord_http,
+            webhook,
+            client_id.clone(),
+            scopes.clone(),
+        )
+        .await?;
         (token.access_token, token.refresh_token.unwrap())
     };
 
@@ -87,7 +102,14 @@ pub async fn get_dcf_token(
         Ok(token) => token,
         Err(e) => {
             tracing::warn!("could not use stored token, trying new dcf: {}", e);
-            do_dcf_flow(client, webhook, client_id.clone(), scopes.clone()).await?
+            do_dcf_flow(
+                client,
+                discord_http,
+                webhook,
+                client_id.clone(),
+                scopes.clone(),
+            )
+            .await?
         }
     };
 
@@ -103,7 +125,7 @@ pub async fn get_dcf_token(
         twitch_oauth2::Validator::All(twitch_oauth2::scopes::validator::Sized(validator.into()));
     if let Some(missing) = validator.missing(token.scopes()) {
         tracing::warn!(%missing, "missing scopes, trying new dcf");
-        token = do_dcf_flow(client, webhook, client_id, scopes).await?;
+        token = do_dcf_flow(client, discord_http, webhook, client_id, scopes).await?;
     }
     let file = std::fs::File::create(&secret_path)?;
     serde_json::to_writer(
@@ -118,33 +140,44 @@ pub async fn get_dcf_token(
 
 pub async fn do_dcf_flow(
     client: &reqwest::Client,
-    webhook: &discord_webhook::Webhook,
+    discord_http: &serenity::http::Http,
+    webhook: &serenity::model::webhook::Webhook,
     client_id: twitch_oauth2::ClientId,
     scopes: Vec<twitch_oauth2::Scope>,
 ) -> Result<UserToken, eyre::Report> {
+    let mut sent_message: Option<serenity::all::MessageId> = None;
     let mut builder = twitch_oauth2::DeviceUserTokenBuilder::new(client_id, scopes);
-    let response = builder.start(client).await?;
-    let url = &response.verification_uri;
-    let code = &response.user_code;
-    println!("Please visit {} and enter the code: {}", url, code);
-    tracing::info!("waiting for user to enter code at {}", url);
+    let token = loop {
+        let response = builder.start(client).await?;
+        let url = &response.verification_uri;
+        let code = &response.user_code;
+        println!("Please visit {} and enter the code: {}", url, code);
+        tracing::info!("waiting for user to enter code at {}", url);
+        if let Some(msg_id) = sent_message {
+            let message = serenity::all::EditWebhookMessage::new().content(format!("Please visit <{url}> and enter the code: `{code}` to authenticate `twitch_discord_moderation` with twitch!"));
+            webhook.edit_message(discord_http, msg_id, message).await?;
+        } else {
+            let message = serenity::all::ExecuteWebhook::new().content(format!("Please visit <{url}> and enter the code: `{code}` to authenticate `twitch_discord_moderation` with twitch!")).username("twitch_moderation");
+            let Some(resp) = webhook.execute(discord_http, true, message).await? else {
+                eyre::bail!("discord gave no response when it should've for the webhook");
+            };
+            sent_message.replace(resp.id);
+        }
+        tracing::info!("sent discord webhook");
+        tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+        match builder.wait_for_code(client, tokio::time::sleep).await {
+            Ok(t) => break t,
+            Err(twitch_oauth2::tokens::errors::DeviceUserTokenExchangeError::Expired) => continue,
+            Err(e) => return Err(e.into()),
+        }
+    };
     webhook
-        .send(|m| {
-            m.content(&format!(
-                "Please visit <{}> and enter the code: `{}` to authenticate `twitch_discord_moderation` with twitch!",
-                url, code
-            )).username("twitch_moderation")
-        })
-        .await
-        .map_err(|e| eyre::eyre!("{e}"))?;
-    tracing::info!("sent discord webhook");
-    tokio::time::sleep(std::time::Duration::from_secs(10)).await;
-    let token = builder.wait_for_code(client, tokio::time::sleep).await?;
-    webhook
-        .send(|m| {
-            m.content("Successfully authenticated with twitch!")
-                .username("twitch_moderation")
-        })
+        .edit_message(
+            discord_http,
+            sent_message.unwrap(),
+            serenity::all::EditWebhookMessage::new()
+                .content("Successfully authenticated with twitch!"),
+        )
         .await
         .map_err(|e| eyre::eyre!("{e}"))?;
     Ok(token)
@@ -209,9 +242,17 @@ pub async fn get_access_token(
         &opts.dcf_oauth_client_secret,
         &opts.dcf_secret_path,
     ) {
-        let webhook = discord_webhook::Webhook::from_url(opts.discord_webhook.as_str());
+        let discord_http = serenity::http::HttpBuilder::without_token()
+            .client(client.clone())
+            .build();
+        let webhook = serenity::model::webhook::Webhook::from_url(
+            &discord_http,
+            opts.discord_webhook.as_str(),
+        )
+        .await?;
         get_dcf_token(
             client,
+            &discord_http,
             &webhook,
             vec![
                 twitch_oauth2::Scope::ModeratorReadBlockedTerms,
@@ -235,15 +276,12 @@ pub async fn get_access_token(
 
 impl Subscriber {
     #[tracing::instrument(skip(opts))]
-    pub async fn new(opts: &crate::Opts) -> Result<Self, eyre::Report> {
-        use twitch_api::client::ClientDefault;
-        let product = format!("twitch_discord_moderation/{} (https://github.com/Emilgardis/twitch_discord_moderation)", env!("CARGO_PKG_VERSION"));
-        let client = reqwest::Client::default_client_with_name(Some(product.try_into()?))?;
-        let access_token = get_access_token(&client, opts)
+    pub async fn new(client: &reqwest::Client, opts: &crate::Opts) -> Result<Self, eyre::Report> {
+        let access_token = get_access_token(client, opts)
             .await
             .context("could not get access token")?;
         let token_user_id = access_token
-            .validate_token(&client)
+            .validate_token(client)
             .await?
             .user_id
             .ok_or_else(|| eyre::eyre!("no user id found for oauth2 token, this is a bug"))?;

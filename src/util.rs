@@ -277,6 +277,8 @@ pub fn build_logger() -> Result<(), eyre::Report> {
     let filter = tracing_subscriber::EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info"))
         .add_directive("hyper=off".parse()?)
+        .add_directive("h2=off".parse()?)
+        .add_directive("rustls=off".parse()?)
         .add_directive("sqlx=warn".parse()?)
         .add_directive("want=info".parse()?)
         .add_directive("tokio_tungstenite=info".parse()?)
