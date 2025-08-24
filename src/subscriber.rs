@@ -155,10 +155,10 @@ pub async fn do_dcf_flow(
         tracing::info!("waiting for user to enter code at {}", url);
         if let Some(msg_id) = sent_message {
             let message = serenity::all::EditWebhookMessage::new().content(format!("Please visit <{url}> and enter the code: `{code}` to authenticate `twitch_discord_moderation` with twitch!"));
-            webhook.edit_message(&discord_http, msg_id, message).await?;
+            webhook.edit_message(discord_http, msg_id, message).await?;
         } else {
             let message = serenity::all::ExecuteWebhook::new().content(format!("Please visit <{url}> and enter the code: `{code}` to authenticate `twitch_discord_moderation` with twitch!")).username("twitch_moderation");
-            let Some(resp) = webhook.execute(&discord_http, true, message).await? else {
+            let Some(resp) = webhook.execute(discord_http, true, message).await? else {
                 eyre::bail!("discord gave no response when it should've for the webhook");
             };
             sent_message.replace(resp.id);
@@ -173,7 +173,7 @@ pub async fn do_dcf_flow(
     };
     webhook
         .edit_message(
-            &discord_http,
+            discord_http,
             sent_message.unwrap(),
             serenity::all::EditWebhookMessage::new()
                 .content("Successfully authenticated with twitch!"),

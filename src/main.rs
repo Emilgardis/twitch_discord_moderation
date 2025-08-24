@@ -221,10 +221,10 @@ async fn main() -> eyre::Result<()> {
 }
 
 pub async fn run(client: &reqwest::Client, opts: &Opts) -> eyre::Result<()> {
-    let subscriber = subscriber::Subscriber::new(&client, opts)
+    let subscriber = subscriber::Subscriber::new(client, opts)
         .await
         .context("could not construct subscriber")?;
-    let webhook = webhook::Webhook::new(&client, subscriber.channel_login.clone(), opts).await?;
+    let webhook = webhook::Webhook::new(client, subscriber.channel_login.clone(), opts).await?;
     let recv = subscriber.channel.subscribe();
     tracing::debug!("entering main block");
     tokio::select!(
