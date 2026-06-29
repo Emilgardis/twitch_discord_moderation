@@ -60,5 +60,5 @@ fn readme_help_usage() {
         .skip(1)
         .take_while(|line| !line.starts_with("<!--END commandline options-->"))
         .collect();
-    assert_eq!(usage_help, readme_usage_help);
+    assert_eq!(readme_usage_help, usage_help);
 }

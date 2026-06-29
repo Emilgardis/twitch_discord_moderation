@@ -7,7 +7,6 @@ use twitch_api::{
 pub struct Webhook {
     pub webhook: serenity::model::webhook::Webhook,
     pub channel_login: types::UserName,
-    pub channel_bot_name: Option<types::DisplayName>,
     discord_http: serenity::http::Http,
 }
 
@@ -35,7 +34,6 @@ impl Webhook {
             )
             .await?,
             channel_login,
-            channel_bot_name: opts.channel_bot_name.clone().map(types::DisplayName::new),
             discord_http: http,
         })
     }

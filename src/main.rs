@@ -74,7 +74,8 @@ pub struct Opts {
     pub dcf_secret_path: Option<std::path::PathBuf>,
     ///
     /// Name of channel bot.
-    #[clap(long, env, hide_env = true)]
+    #[clap(long, env, hide_env = true, hide=true)]
+    #[deprecated = "not used anymore"]
     pub channel_bot_name: Option<String>,
     /// Report unrecoverable errors to the discord webhook instead of making the program exit.
     #[clap(long, env, hide_env = true)]

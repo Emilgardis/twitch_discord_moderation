@@ -82,9 +82,6 @@ Options:
 
           [default: ./.dcf_secret]
 
-      --channel-bot-name <CHANNEL_BOT_NAME>
-          Name of channel bot
-
       --discord-error-report
           Report unrecoverable errors to the discord webhook instead of making the program exit
 
