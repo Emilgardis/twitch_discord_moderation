@@ -4,7 +4,7 @@ pub mod subscriber;
 pub mod util;
 pub mod webhook;
 
-use clap::{builder::ArgPredicate, ArgGroup, Parser};
+use clap::{ArgGroup, Parser, builder::ArgPredicate};
 use eyre::WrapErr;
 
 #[derive(Parser, Debug)]
@@ -74,7 +74,8 @@ pub struct Opts {
     pub dcf_secret_path: Option<std::path::PathBuf>,
     ///
     /// Name of channel bot.
-    #[clap(long, env, hide_env = true)]
+    #[clap(long, env, hide_env = true, hide = true)]
+    #[deprecated = "not used anymore"]
     pub channel_bot_name: Option<String>,
     /// Report unrecoverable errors to the discord webhook instead of making the program exit.
     #[clap(long, env, hide_env = true)]
@@ -200,21 +201,18 @@ async fn main() -> eyre::Result<()> {
                 "The bot crashed{many}. The bot has stopped\n{first_error}```\n{error}```"
             ));
         let e = webhook.execute(&http, false, message).await;
-        // message was sent ok. stall the program to prevent reporting again
-        if e.is_ok() {
+        if let Err(e) = e {
+            tracing::error!("Error report failed to send to discord. Error: {}", e);
+            // some sleeping so that we don't hit the resources again immediately if the program gets restarted
+            // and the error is still there
+            tokio::time::sleep(std::time::Duration::from_secs(60)).await;
+        } else {
+            // message was sent ok. stall the program to prevent reporting again
             tracing::info!(
                 "Error report sent to discord. Stalling the program to prevent it from exiting."
             );
             futures::future::pending::<()>().await;
             unreachable!();
-        } else {
-            tracing::error!(
-                "Error report failed to send to discord. Error: {}",
-                e.unwrap_err()
-            );
-            // some sleeping so that we don't hit the resources again immediately if the program gets restarted
-            // and the error is still there
-            tokio::time::sleep(std::time::Duration::from_secs(60)).await;
         }
     }
     return Err(err);

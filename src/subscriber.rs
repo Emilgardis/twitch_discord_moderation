@@ -8,13 +8,12 @@ use tracing_futures::Instrument;
 use twitch_api::twitch_oauth2::{self, TwitchToken, UserToken};
 
 use twitch_api::{
+    HelixClient,
     eventsub::{
-        self,
+        self, Event,
         event::websocket::{EventsubWebsocketData, ReconnectPayload, SessionData, WelcomePayload},
-        Event,
     },
     types::{self},
-    HelixClient,
 };
 pub const MOD_NONCE: &str = "moderator";
 pub struct Subscriber {
@@ -189,7 +188,7 @@ pub async fn get_access_token(
 ) -> Result<UserToken, eyre::Report> {
     if let Some(ref access_token) = opts.access_token {
         make_token(client, access_token.secret().to_string()).await
-    } else if let (Some(ref oauth_service_url), Some(ref pointer)) =
+    } else if let (Some(oauth_service_url), Some(pointer)) =
         (&opts.oauth2_service_url, &opts.oauth2_service_pointer)
     {
         tracing::info!(
@@ -463,7 +462,9 @@ impl WebsocketClient {
                         Err(tungstenite::Error::Protocol(
                             tungstenite::error::ProtocolError::ResetWithoutClosingHandshake,
                         )) => {
-                            tracing::warn!("connection was sent an unexpected frame or was reset, reestablishing it");
+                            tracing::warn!(
+                                "connection was sent an unexpected frame or was reset, reestablishing it"
+                            );
                             self.reconnect(opts, &mut s).await?;
                             continue;
                         }
@@ -612,7 +613,7 @@ impl Events {
             Event::ChannelModerateV2(eventsub::Payload {
                 message: eventsub::Message::Notification(p),
                 ..
-            }) => Events::ChannelModerateV2(p, timestamp),
+            }) => Self::ChannelModerateV2(p, timestamp),
             _ => return None,
         };
         Some(event)

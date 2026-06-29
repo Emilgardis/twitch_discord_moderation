@@ -2,19 +2,19 @@
 
 use once_cell::sync::Lazy;
 use tracing_subscriber::{
-    fmt::{self, format::Writer, FmtContext, FormatEvent, FormatFields},
+    fmt::{self, FmtContext, FormatEvent, FormatFields, format::Writer},
     registry::LookupSpan,
 };
 
 use tracing_log::NormalizeEvent;
 
 use eyre::WrapErr;
-use fmt::{time::FormatTime, FormattedFields};
+use fmt::{FormattedFields, time::FormatTime};
 use owo_colors::OwoColorize;
 use std::{borrow::Cow, fmt::Write};
 use tracing::{
-    field::{Field, Visit},
     Level, Subscriber,
+    field::{Field, Visit},
 };
 
 pub mod built_info {
@@ -23,7 +23,7 @@ pub mod built_info {
 
 pub static LONG_VERSION: Lazy<String> = Lazy::new(|| {
     let version = if let Some(hash) = built_info::GIT_COMMIT_HASH {
-        if let Some(true) = built_info::GIT_DIRTY {
+        if built_info::GIT_DIRTY == Some(true) {
             format!(
                 "{} ({}*)",
                 built_info::PKG_VERSION,
@@ -75,7 +75,10 @@ where
     S: Subscriber + for<'lookup> LookupSpan<'lookup>,
     N: for<'writer> FormatFields<'writer> + 'static,
 {
-    pub(crate) fn new(ctx: &'a FmtContext<'a, S, N>, span: Option<&'a tracing::span::Id>) -> Self {
+    pub(crate) const fn new(
+        ctx: &'a FmtContext<'a, S, N>,
+        span: Option<&'a tracing::span::Id>,
+    ) -> Self {
         Self { ctx, span }
     }
 }
