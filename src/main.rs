@@ -4,7 +4,7 @@ pub mod subscriber;
 pub mod util;
 pub mod webhook;
 
-use clap::{builder::ArgPredicate, ArgGroup, Parser};
+use clap::{ArgGroup, Parser, builder::ArgPredicate};
 use eyre::WrapErr;
 
 #[derive(Parser, Debug)]
@@ -74,7 +74,7 @@ pub struct Opts {
     pub dcf_secret_path: Option<std::path::PathBuf>,
     ///
     /// Name of channel bot.
-    #[clap(long, env, hide_env = true, hide=true)]
+    #[clap(long, env, hide_env = true, hide = true)]
     #[deprecated = "not used anymore"]
     pub channel_bot_name: Option<String>,
     /// Report unrecoverable errors to the discord webhook instead of making the program exit.

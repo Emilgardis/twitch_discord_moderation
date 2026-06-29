@@ -8,13 +8,12 @@ use tracing_futures::Instrument;
 use twitch_api::twitch_oauth2::{self, TwitchToken, UserToken};
 
 use twitch_api::{
+    HelixClient,
     eventsub::{
-        self,
+        self, Event,
         event::websocket::{EventsubWebsocketData, ReconnectPayload, SessionData, WelcomePayload},
-        Event,
     },
     types::{self},
-    HelixClient,
 };
 pub const MOD_NONCE: &str = "moderator";
 pub struct Subscriber {
@@ -463,7 +462,9 @@ impl WebsocketClient {
                         Err(tungstenite::Error::Protocol(
                             tungstenite::error::ProtocolError::ResetWithoutClosingHandshake,
                         )) => {
-                            tracing::warn!("connection was sent an unexpected frame or was reset, reestablishing it");
+                            tracing::warn!(
+                                "connection was sent an unexpected frame or was reset, reestablishing it"
+                            );
                             self.reconnect(opts, &mut s).await?;
                             continue;
                         }
