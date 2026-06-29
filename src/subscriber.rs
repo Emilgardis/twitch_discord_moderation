@@ -189,7 +189,7 @@ pub async fn get_access_token(
 ) -> Result<UserToken, eyre::Report> {
     if let Some(ref access_token) = opts.access_token {
         make_token(client, access_token.secret().to_string()).await
-    } else if let (Some(ref oauth_service_url), Some(ref pointer)) =
+    } else if let (Some(oauth_service_url), Some(pointer)) =
         (&opts.oauth2_service_url, &opts.oauth2_service_pointer)
     {
         tracing::info!(

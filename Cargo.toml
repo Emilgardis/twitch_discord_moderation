@@ -2,7 +2,7 @@
 name = "twitch-discord-moderation"
 version = "0.7.1"
 authors = ["Emil Gardström <emil.gardstrom@gmail.com>"]
-edition = "2021"
+edition = "2024"
 license = "MIT OR APACHE-2.0"
 default-run = "twitch-discord-moderation"
 readme = "README.md"
