@@ -24,11 +24,11 @@ impl Webhook {
         client: &reqwest::Client,
         channel_login: types::UserName,
         opts: &crate::Opts,
-    ) -> Result<Webhook, eyre::Report> {
+    ) -> Result<Self, eyre::Report> {
         let http = serenity::http::HttpBuilder::without_token()
             .client(client.clone())
             .build();
-        Ok(Webhook {
+        Ok(Self {
             webhook: serenity::model::webhook::Webhook::from_url(
                 &http,
                 opts.discord_webhook.as_str(),

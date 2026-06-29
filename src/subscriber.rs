@@ -612,7 +612,7 @@ impl Events {
             Event::ChannelModerateV2(eventsub::Payload {
                 message: eventsub::Message::Notification(p),
                 ..
-            }) => Events::ChannelModerateV2(p, timestamp),
+            }) => Self::ChannelModerateV2(p, timestamp),
             _ => return None,
         };
         Some(event)
