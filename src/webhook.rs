@@ -48,8 +48,8 @@ impl Webhook {
         while let Ok(msg) = recv.recv().await {
             tracing::info!("Received event {:?}", msg);
             match msg {
-                crate::subscriber::Events::ChannelModerateV2(p, t) => {
-                    self.post_moderator_action(p.action, p.moderator_user_login, t)
+                crate::subscriber::Events::ChannelModerateV2(p, _t) => {
+                    self.post_moderator_action(p.action, p.moderator_user_login)
                         .await?
                 }
             }
@@ -58,12 +58,11 @@ impl Webhook {
     }
 
     #[tracing::instrument(skip(self))]
-    pub async fn post_moderator_action(
+    pub async fn format_actionv2(
         &self,
         action: ActionV2,
         moderator: types::UserName,
-        timestamp: types::Timestamp,
-    ) -> Result<(), eyre::Report> {
+    ) -> Option<String> {
         fn header_(emoji: &str, moderator: &types::UserName) -> String {
             format!("{emoji} _Twitch Moderation_ |\n*{moderator}*: ")
         }
@@ -74,8 +73,8 @@ impl Webhook {
                 "".to_string()
             }
         }
-        let done_by = format!("{}@twitch", moderator,);
-        let message = match action {
+
+        match action {
             ActionV2::Delete(moderate::Delete {
                 user_id,
                 user_login,
@@ -348,8 +347,16 @@ impl Webhook {
                 tracing::warn!("Unknown action {:?}", action);
                 None
             }
-        };
-        if let Some(text) = message {
+        }
+    }
+    pub async fn post_moderator_action(
+        &self,
+        action: ActionV2,
+        moderator: types::UserName,
+    ) -> Result<(), eyre::Report> {
+        let done_by = format!("{}@twitch", moderator,);
+        let message = self.format_actionv2(action, moderator);
+        if let Some(text) = message.await {
             let builder = serenity::all::ExecuteWebhook::new()
                 .content(&text)
                 .username(&done_by);
